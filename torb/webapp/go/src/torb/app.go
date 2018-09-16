@@ -245,6 +245,24 @@ func getEvents(all bool) ([]*Event, error) {
 		}
 	}
 
+	var sheets []*Sheet
+	{
+		sheetRows, err := db.Query("SELECT * FROM sheets ORDER BY `rank`, num")
+		if err != nil {
+			return nil, err
+		}
+		defer sheetRows.Close()
+
+		for sheetRows.Next() {
+			var sheet Sheet
+			if err := sheetRows.Scan(&sheet.ID, &sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
+				return nil, err
+			}
+			sheets = append(sheets, &sheet)
+		}
+		sheetRows.Close()
+	}
+
 	for i, event := range events {
 		rvs, ok := rvss[event.ID]
 		if !ok {
@@ -256,20 +274,8 @@ func getEvents(all bool) ([]*Event, error) {
 			return nil, err
 		}
 
-		{
-			sheetRows, err := db.Query("SELECT * FROM sheets ORDER BY `rank`, num")
-			if err != nil {
-				return nil, err
-			}
-			defer sheetRows.Close()
-
-			for sheetRows.Next() {
-				var sheet Sheet
-				if err := sheetRows.Scan(&sheet.ID, &sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
-					return nil, err
-				}
-				completeSheetAndEvent(&sheet, event, rvs, -1, false)
-			}
+		for _, sheet := range sheets {
+			completeSheetAndEvent(sheet, event, rvs, -1, false)
 		}
 
 		for k := range event.Sheets {
