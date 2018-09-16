@@ -913,7 +913,7 @@ func main() {
 		return renderReportCSV(c, reports)
 	}, adminLoginRequired)
 
-	echopprof.WrapGroup("/debug/pprof", e.Group("/debug/pprof"))
+	// echopprof.WrapGroup("/debug/pprof", e.Group("/debug/pprof"))
 
 	e.Start(":8080")
 }
