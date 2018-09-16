@@ -714,10 +714,7 @@ func deleteReserve(c echo.Context) error {
 		tx.Rollback()
 		if err == sql.ErrNoRows {
 			return resError(c, "not_reserved", 400)
-		} else {
-			continue
 		}
-		//return err
 	}
 	if reservation.UserID != user.ID {
 		tx.Rollback()
