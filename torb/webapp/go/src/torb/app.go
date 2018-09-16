@@ -722,8 +722,8 @@ func deleteReserve(c echo.Context) error {
 		}
 		if reservation.UserID != user.ID {
 			tx.Rollback()
-			return resError(c, "not_permitted", 403)
-
+			//return resError(c, "not_permitted", 403)
+			continue
 		}
 
 		if _, err := tx.Exec("UPDATE reservations SET canceled_at = ? WHERE id = ?", time.Now().UTC().Format("2006-01-02 15:04:05.000000"), reservation.ID); err != nil {
