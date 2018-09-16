@@ -69,6 +69,7 @@ type Reservation struct {
 	UserID     int64      `json:"-"`
 	ReservedAt *time.Time `json:"-"`
 	CanceledAt *time.Time `json:"-"`
+	EventPrice int64      `json:"-"`
 
 	Event          *Event `json:"event,omitempty"`
 	SheetRank      string `json:"sheet_rank,omitempty"`
@@ -185,6 +186,8 @@ func getLoginAdministrator(c echo.Context) (*Administrator, error) {
 	return &administrator, err
 }
 
+var EMPTY_RVS = make(map[int64]Reservation)
+
 func getEvents(all bool) ([]*Event, error) {
 	rows, err := db.Query("SELECT * FROM events ORDER BY id ASC")
 	if err != nil {
@@ -203,8 +206,38 @@ func getEvents(all bool) ([]*Event, error) {
 		}
 		events = append(events, &event)
 	}
+
+	// rvss[eventID][sheetID]
+	rvss := make(map[int64]map[int64]Reservation)
+	{
+		rows2, err := db.Query(
+			"SELECT * FROM reservations WHERE canceled_at IS NULL " +
+				" GROUP BY event_id, sheet_id HAVING reserved_at = MIN(reserved_at)",
+		)
+		if err != nil {
+			return nil, err
+		}
+		defer rows2.Close()
+		for rows2.Next() {
+			var rv Reservation
+			err := rows2.Scan(&rv.ID, &rv.EventID, &rv.SheetID, &rv.UserID, &rv.ReservedAt, &rv.CanceledAt, &rv.EventPrice)
+			if err != nil {
+				return nil, err
+			}
+			if _, ok := rvss[rv.EventID]; !ok {
+				rvss[rv.EventID] = make(map[int64]Reservation)
+			}
+			rvss[rv.EventID][rv.SheetID] = rv
+		}
+	}
+
 	for i, v := range events {
-		event, err := getEvent(v.ID, -1)
+		rvs, ok := rvss[v.ID]
+		if !ok {
+			rvs = EMPTY_RVS
+		}
+
+		event, err := getEventWithRvs(v.ID, -1, rvs)
 		if err != nil {
 			return nil, err
 		}
@@ -217,6 +250,29 @@ func getEvents(all bool) ([]*Event, error) {
 }
 
 func getEvent(eventID, loginUserID int64) (*Event, error) {
+	rows2, err := db.Query(
+		"SELECT * FROM reservations WHERE event_id = ? AND canceled_at IS NULL "+
+			" GROUP BY event_id, sheet_id HAVING reserved_at = MIN(reserved_at)",
+		eventID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows2.Close()
+	rvs := make(map[int64]Reservation)
+	for rows2.Next() {
+		var reservation Reservation
+		err := rows2.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &reservation.EventPrice)
+		if err != nil {
+			return nil, err
+		}
+		rvs[reservation.SheetID] = reservation
+	}
+
+	return getEventWithRvs(eventID, loginUserID, rvs)
+}
+
+func getEventWithRvs(eventID, loginUserID int64, rvs map[int64]Reservation) (*Event, error) {
 	var event Event
 	if err := db.QueryRow("SELECT * FROM events WHERE id = ?", eventID).Scan(&event.ID, &event.Title, &event.PublicFg, &event.ClosedFg, &event.Price); err != nil {
 		return nil, err
@@ -246,7 +302,7 @@ func getEvent(eventID, loginUserID int64) (*Event, error) {
 	reservationBySheetID := make(map[int64]Reservation)
 	for rows2.Next() {
 		var reservation Reservation
-		err := rows2.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt)
+		err := rows2.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &reservation.EventPrice)
 		if err != nil {
 			return nil, err
 		}
@@ -262,7 +318,7 @@ func getEvent(eventID, loginUserID int64) (*Event, error) {
 		event.Total++
 		event.Sheets[sheet.Rank].Total++
 
-		reservation, ok := reservationBySheetID[sheet.ID]
+		reservation, ok := rvs[sheet.ID]
 		if ok {
 			sheet.Mine = reservation.UserID == loginUserID
 			sheet.Reserved = true
@@ -411,7 +467,7 @@ func getUser(c echo.Context) error {
 	for rows.Next() {
 		var reservation Reservation
 		var sheet Sheet
-		if err := rows.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &sheet.Rank, &sheet.Num); err != nil {
+		if err := rows.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &reservation.EventPrice, &sheet.Rank, &sheet.Num); err != nil {
 			return err
 		}
 
@@ -589,7 +645,7 @@ func postReserve(c echo.Context) error {
 			return err
 		}
 
-		res, err := tx.Exec("INSERT INTO reservations (event_id, sheet_id, user_id, reserved_at) VALUES (?, ?, ?, ?)", event.ID, sheet.ID, user.ID, time.Now().UTC().Format("2006-01-02 15:04:05.000000"))
+		res, err := tx.Exec("INSERT INTO reservations (event_id, sheet_id, user_id, reserved_at, event_price) VALUES (?, ?, ?, ?, ?)", event.ID, sheet.ID, user.ID, time.Now().UTC().Format("2006-01-02 15:04:05.000000"), event.Price)
 		if err != nil {
 			tx.Rollback()
 			log.Println("re-try: rollback by", err)
@@ -657,7 +713,7 @@ func deleteReserve(c echo.Context) error {
 	}
 
 	var reservation Reservation
-	if err := tx.QueryRow("SELECT * FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at IS NULL GROUP BY event_id HAVING reserved_at = MIN(reserved_at) FOR UPDATE", event.ID, sheet.ID).Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt); err != nil {
+	if err := tx.QueryRow("SELECT * FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at IS NULL GROUP BY event_id HAVING reserved_at = MIN(reserved_at) FOR UPDATE", event.ID, sheet.ID).Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &reservation.EventPrice); err != nil {
 		tx.Rollback()
 		if err == sql.ErrNoRows {
 			return resError(c, "not_reserved", 400)
@@ -852,7 +908,7 @@ func reportSales(c echo.Context) error {
 	for rows.Next() {
 		var reservation Reservation
 		var sheet Sheet
-		if err := rows.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &sheet.Rank, &sheet.Num, &sheet.Price, &event.Price); err != nil {
+		if err := rows.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &reservation.EventPrice, &sheet.Rank, &sheet.Num, &sheet.Price, &event.Price); err != nil {
 			return err
 		}
 		report := Report{
@@ -873,7 +929,7 @@ func reportSales(c echo.Context) error {
 }
 
 func reportSaleses(c echo.Context) error {
-	rows, err := db.Query("select r.*, s.rank as sheet_rank, s.num as sheet_num, s.price as sheet_price, e.id as event_id, e.price as event_price from reservations r inner join sheets s on s.id = r.sheet_id inner join events e on e.id = r.event_id order by reserved_at asc")
+	rows, err := db.Query("select r.*, s.rank as sheet_rank, s.num as sheet_num, s.price as sheet_price, r.event_id, r.event_price as event_price from reservations r inner join sheets s on s.id = r.sheet_id by reserved_at asc")
 	if err != nil {
 		return err
 	}
@@ -884,7 +940,7 @@ func reportSaleses(c echo.Context) error {
 		var reservation Reservation
 		var sheet Sheet
 		var event Event
-		if err := rows.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &sheet.Rank, &sheet.Num, &sheet.Price, &event.ID, &event.Price); err != nil {
+		if err := rows.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &reservation.EventPrice, &sheet.Rank, &sheet.Num, &sheet.Price, &event.ID, &event.Price); err != nil {
 			return err
 		}
 		report := Report{
