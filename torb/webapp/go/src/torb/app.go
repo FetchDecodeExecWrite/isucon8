@@ -189,7 +189,12 @@ func getLoginAdministrator(c echo.Context) (*Administrator, error) {
 var EMPTY_RVS = make(map[int64]Reservation)
 
 func getEvents(all bool) ([]*Event, error) {
-	rows, err := db.Query("SELECT * FROM events ORDER BY id ASC")
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Commit()
+	rows, err := tx.Query("SELECT * FROM events ORDER BY id ASC")
 	if err != nil {
 		return nil, err
 	}
