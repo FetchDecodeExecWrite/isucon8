@@ -189,7 +189,12 @@ func getLoginAdministrator(c echo.Context) (*Administrator, error) {
 var EMPTY_RVS = make(map[int64]Reservation)
 
 func getEvents(all bool) ([]*Event, error) {
-	rows, err := db.Query("SELECT * FROM events ORDER BY id ASC")
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Commit()
+	rows, err := tx.Query("SELECT * FROM events ORDER BY id ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -297,25 +302,6 @@ func getEventWithRvs(eventID, loginUserID int64, rvs map[int64]Reservation) (*Ev
 		return nil, err
 	}
 	defer rows.Close()
-
-	rows2, err := db.Query(
-		"SELECT * FROM reservations WHERE event_id = ? AND canceled_at IS NULL "+
-			" GROUP BY event_id, sheet_id HAVING reserved_at = MIN(reserved_at)",
-		event.ID,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows2.Close()
-	reservationBySheetID := make(map[int64]Reservation)
-	for rows2.Next() {
-		var reservation Reservation
-		err := rows2.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &reservation.EventPrice)
-		if err != nil {
-			return nil, err
-		}
-		reservationBySheetID[reservation.SheetID] = reservation
-	}
 
 	for rows.Next() {
 		var sheet Sheet
@@ -908,7 +894,7 @@ func reportSales(c echo.Context) error {
 		return err
 	}
 
-	rows, err := db.Query("SELECT r.*, s.rank AS sheet_rank, s.num AS sheet_num, s.price AS sheet_price, e.price AS event_price FROM reservations r INNER JOIN sheets s ON s.id = r.sheet_id INNER JOIN events e ON e.id = r.event_id WHERE r.event_id = ? ORDER BY reserved_at ASC", event.ID)
+	rows, err := db.Query("SELECT r.*, s.rank AS sheet_rank, s.num AS sheet_num, s.price AS sheet_price, e.price AS event_price FROM reservations r INNER JOIN sheets s ON s.id = r.sheet_id INNER JOIN events e ON e.id = r.event_id WHERE r.event_id = ? ORDER BY reserved_at ASC FOR UPDATE", event.ID)
 	if err != nil {
 		return err
 	}
@@ -939,7 +925,7 @@ func reportSales(c echo.Context) error {
 }
 
 func reportSaleses(c echo.Context) error {
-	rows, err := db.Query("select r.*, s.rank as sheet_rank, s.num as sheet_num, s.price as sheet_price, r.event_id, r.event_price as event_price from reservations r inner join sheets s on s.id = r.sheet_id by reserved_at asc")
+	rows, err := db.Query("select r.*, s.rank as sheet_rank, s.num as sheet_num, s.price as sheet_price, r.event_id, r.event_price as event_price from reservations r inner join sheets s on s.id = r.sheet_id order by reserved_at asc FOR UPDATE")
 	if err != nil {
 		return err
 	}
@@ -1016,8 +1002,10 @@ func main() {
 	e.GET("/admin/api/reports/events/:id/sales", reportSales, adminLoginRequired)
 	e.GET("/admin/api/reports/sales", reportSaleses, adminLoginRequired)
 
-	if true {
+	if os.Getenv("DEBUG_ISUCON") == "" {
 		echopprof.Wrap(e)
+	} else {
+		fmt.Println("debugging...")
 	}
 
 	e.Start(":8080")
