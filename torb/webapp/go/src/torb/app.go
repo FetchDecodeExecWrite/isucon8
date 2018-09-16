@@ -220,7 +220,7 @@ func getEvents(all bool) ([]*Event, error) {
 		defer rows2.Close()
 		for rows2.Next() {
 			var rv Reservation
-			err := rows2.Scan(&rv.ID, &rv.EventID, &rv.SheetID, &rv.UserID, &rv.ReservedAt, &rv.CanceledAt)
+			err := rows2.Scan(&rv.ID, &rv.EventID, &rv.SheetID, &rv.UserID, &rv.ReservedAt, &rv.CanceledAt, &rv.EventPrice)
 			if err != nil {
 				return nil, err
 			}
@@ -262,7 +262,7 @@ func getEvent(eventID, loginUserID int64) (*Event, error) {
 	rvs := make(map[int64]Reservation)
 	for rows2.Next() {
 		var reservation Reservation
-		err := rows2.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt)
+		err := rows2.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &reservation.EventPrice)
 		if err != nil {
 			return nil, err
 		}
