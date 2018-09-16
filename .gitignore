@@ -14,4 +14,7 @@
 /.viminfo
 /bkup/
 /.gitconfig
+/.mysql_history
+/bin/
+/dump
 
