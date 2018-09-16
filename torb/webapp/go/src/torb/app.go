@@ -21,6 +21,7 @@ import (
 	"github.com/labstack/echo"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/middleware"
+	"github.com/sevenNt/echo-pprof"
 )
 
 type User struct {
@@ -911,6 +912,8 @@ func main() {
 		}
 		return renderReportCSV(c, reports)
 	}, adminLoginRequired)
+
+	echopprof.WrapGroup("/debug/pprof", e.Group("/debug/pprof"))
 
 	e.Start(":8080")
 }
