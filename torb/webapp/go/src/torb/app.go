@@ -185,13 +185,7 @@ func getLoginAdministrator(c echo.Context) (*Administrator, error) {
 }
 
 func getEvents(all bool) ([]*Event, error) {
-	tx, err := db.Begin()
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Commit()
-
-	rows, err := tx.Query("SELECT * FROM events ORDER BY id ASC")
+	rows, err := db.Query("SELECT * FROM events ORDER BY id ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -251,7 +245,7 @@ func getEvent(eventID, loginUserID int64) (*Event, error) {
 		var reservation Reservation
 		err := db.QueryRow(
 			"SELECT * FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at IS NULL"+
-			" ORDER BY reserved_at LIMIT 1",
+				" ORDER BY reserved_at LIMIT 1",
 			event.ID, sheet.ID,
 		).Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt)
 		if err == nil {
