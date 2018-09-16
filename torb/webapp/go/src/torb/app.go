@@ -185,6 +185,8 @@ func getLoginAdministrator(c echo.Context) (*Administrator, error) {
 	return &administrator, err
 }
 
+var EMPTY_RVS = make(map[int64]Reservation)
+
 func getEvents(all bool) ([]*Event, error) {
 	rows, err := db.Query("SELECT * FROM events ORDER BY id ASC")
 	if err != nil {
@@ -203,8 +205,38 @@ func getEvents(all bool) ([]*Event, error) {
 		}
 		events = append(events, &event)
 	}
+
+	// rvss[eventID][sheetID]
+	rvss := make(map[int64]map[int64]Reservation)
+	{
+		rows2, err := db.Query(
+			"SELECT * FROM reservations WHERE canceled_at IS NULL "+
+			" GROUP BY event_id, sheet_id HAVING reserved_at = MIN(reserved_at)",
+		)
+		if err != nil {
+			return nil, err
+		}
+		defer rows2.Close()
+		for rows2.Next() {
+			var rv Reservation
+			err := rows2.Scan(&rv.ID, &rv.EventID, &rv.SheetID, &rv.UserID, &rv.ReservedAt, &rv.CanceledAt)
+			if err != nil {
+				return nil, err
+			}
+			if _, ok := rvss[rv.EventID]; !ok {
+				rvss[rv.EventID] = make(map[int64]Reservation)
+			}
+			rvss[rv.EventID][rv.SheetID] = rv
+		}	
+	}
+
 	for i, v := range events {
-		event, err := getEvent(v.ID, -1)
+		rvs, ok := rvss[v.ID]
+		if !ok {
+			rvs = EMPTY_RVS
+		}
+
+		event, err := getEventWithRvs(v.ID, -1, rvs)
 		if err != nil {
 			return nil, err
 		}
@@ -217,6 +249,29 @@ func getEvents(all bool) ([]*Event, error) {
 }
 
 func getEvent(eventID, loginUserID int64) (*Event, error) {
+	rows2, err := db.Query(
+		"SELECT * FROM reservations WHERE event_id = ? AND canceled_at IS NULL "+
+		" GROUP BY event_id, sheet_id HAVING reserved_at = MIN(reserved_at)",
+		eventID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows2.Close()
+	rvs := make(map[int64]Reservation)
+	for rows2.Next() {
+		var reservation Reservation
+		err := rows2.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt)
+		if err != nil {
+			return nil, err
+		}
+		rvs[reservation.SheetID] = reservation
+	}
+
+	return getEventWithRvs(eventID, loginUserID, rvs)
+}
+
+func getEventWithRvs(eventID, loginUserID int64, rvs map[int64]Reservation) (*Event, error) {
 	var event Event
 	if err := db.QueryRow("SELECT * FROM events WHERE id = ?", eventID).Scan(&event.ID, &event.Title, &event.PublicFg, &event.ClosedFg, &event.Price); err != nil {
 		return nil, err
@@ -234,25 +289,6 @@ func getEvent(eventID, loginUserID int64) (*Event, error) {
 	}
 	defer rows.Close()
 
-	rows2, err := db.Query(
-		"SELECT * FROM reservations WHERE event_id = ? AND canceled_at IS NULL "+
-		" GROUP BY event_id, sheet_id HAVING reserved_at = MIN(reserved_at)",
-		event.ID,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows2.Close()
-	reservationBySheetID := make(map[int64]Reservation)
-	for rows2.Next() {
-		var reservation Reservation
-		err := rows2.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt)
-		if err != nil {
-			return nil, err
-		}
-		reservationBySheetID[reservation.SheetID] = reservation
-	}
-
 	for rows.Next() {
 		var sheet Sheet
 		if err := rows.Scan(&sheet.ID, &sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
@@ -262,7 +298,7 @@ func getEvent(eventID, loginUserID int64) (*Event, error) {
 		event.Total++
 		event.Sheets[sheet.Rank].Total++
 
-		reservation, ok := reservationBySheetID[sheet.ID]
+		reservation, ok := rvs[sheet.ID]
 		if ok {
 			sheet.Mine = reservation.UserID == loginUserID
 			sheet.Reserved = true
