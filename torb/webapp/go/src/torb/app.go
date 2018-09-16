@@ -950,7 +950,7 @@ func main() {
 	e.GET("/admin/api/reports/events/:id/sales", reportSales, adminLoginRequired)
 	e.GET("/admin/api/reports/sales", reportSaleses, adminLoginRequired)
 
-	if false {
+	if true {
 		echopprof.Wrap(e)
 	}
 
