@@ -1,0 +1,5 @@
+/home/isucon/local/perl/bin/start_server
+/home/isucon/local/perl/lib/site_perl/5.28.0/Server/Starter.pm
+/home/isucon/local/perl/lib/site_perl/5.28.0/Server/Starter/Guard.pm
+/home/isucon/local/perl/man/man1/start_server.1
+/home/isucon/local/perl/man/man3/Server::Starter.3

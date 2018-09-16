@@ -1,0 +1,1 @@
+{"pathname":"H/HA/HAARG/Win32-ShellQuote-0.003001.tar.gz","version":"0.003001","name":"Win32::ShellQuote","provides":{"Win32::ShellQuote":{"file":"lib/Win32/ShellQuote.pm","version":"0.003001"}},"target":"Win32::ShellQuote","dist":"Win32-ShellQuote-0.003001"}

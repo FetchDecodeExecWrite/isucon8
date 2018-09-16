@@ -1,0 +1,14 @@
+/home/isucon/local/perl/bin/cpanfile-dump
+/home/isucon/local/perl/bin/mymeta-cpanfile
+/home/isucon/local/perl/lib/site_perl/5.28.0/Module/CPANfile.pm
+/home/isucon/local/perl/lib/site_perl/5.28.0/Module/CPANfile/Environment.pm
+/home/isucon/local/perl/lib/site_perl/5.28.0/Module/CPANfile/Prereq.pm
+/home/isucon/local/perl/lib/site_perl/5.28.0/Module/CPANfile/Prereqs.pm
+/home/isucon/local/perl/lib/site_perl/5.28.0/Module/CPANfile/Requirement.pm
+/home/isucon/local/perl/lib/site_perl/5.28.0/cpanfile-faq.pod
+/home/isucon/local/perl/lib/site_perl/5.28.0/cpanfile.pod
+/home/isucon/local/perl/man/man1/cpanfile-dump.1
+/home/isucon/local/perl/man/man1/mymeta-cpanfile.1
+/home/isucon/local/perl/man/man3/Module::CPANfile.3
+/home/isucon/local/perl/man/man3/cpanfile-faq.3
+/home/isucon/local/perl/man/man3/cpanfile.3

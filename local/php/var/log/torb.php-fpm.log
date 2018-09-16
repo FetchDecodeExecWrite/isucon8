@@ -1,0 +1,24 @@
+[14-Sep-2018 00:11:33] NOTICE: [pool torb] 'user' directive is ignored when FPM is not running as root
+[14-Sep-2018 00:11:33] NOTICE: [pool torb] 'group' directive is ignored when FPM is not running as root
+[14-Sep-2018 00:11:33] NOTICE: fpm is running, pid 15324
+[14-Sep-2018 00:11:33] NOTICE: ready to handle connections
+[14-Sep-2018 00:12:14] NOTICE: Terminating ...
+[14-Sep-2018 00:12:14] NOTICE: exiting, bye-bye!
+[14-Sep-2018 00:12:14] NOTICE: [pool torb] 'user' directive is ignored when FPM is not running as root
+[14-Sep-2018 00:12:14] NOTICE: [pool torb] 'group' directive is ignored when FPM is not running as root
+[14-Sep-2018 00:12:14] NOTICE: fpm is running, pid 15389
+[14-Sep-2018 00:12:14] NOTICE: ready to handle connections
+[14-Sep-2018 00:22:03] NOTICE: Terminating ...
+[14-Sep-2018 00:22:03] NOTICE: exiting, bye-bye!
+[14-Sep-2018 08:35:59] NOTICE: [pool torb] 'user' directive is ignored when FPM is not running as root
+[14-Sep-2018 08:35:59] NOTICE: [pool torb] 'group' directive is ignored when FPM is not running as root
+[14-Sep-2018 08:35:59] NOTICE: fpm is running, pid 2736
+[14-Sep-2018 08:35:59] NOTICE: ready to handle connections
+[14-Sep-2018 08:36:40] NOTICE: Terminating ...
+[14-Sep-2018 08:36:40] NOTICE: exiting, bye-bye!
+[14-Sep-2018 08:36:40] NOTICE: [pool torb] 'user' directive is ignored when FPM is not running as root
+[14-Sep-2018 08:36:40] NOTICE: [pool torb] 'group' directive is ignored when FPM is not running as root
+[14-Sep-2018 08:36:40] NOTICE: fpm is running, pid 2788
+[14-Sep-2018 08:36:40] NOTICE: ready to handle connections
+[14-Sep-2018 10:16:10] NOTICE: Terminating ...
+[14-Sep-2018 10:16:10] NOTICE: exiting, bye-bye!
