@@ -210,14 +210,14 @@ func getEvents(all bool) ([]*Event, error) {
 	// rvss[eventID][sheetID]
 	rvss := make(map[int64]map[int64]Reservation)
 	if len(events) > 0 {
-		eventIDs := make([]interface {}, len(events))
+		eventIDs := make([]interface{}, len(events))
 		for i, e := range events {
 			eventIDs[i] = e.ID
 		}
 
 		rows2, err := db.Query(
-			"SELECT * FROM reservations WHERE event_id IN (?" +
-				strings.Repeat(",?", len(eventIDs) - 1) +
+			"SELECT * FROM reservations WHERE event_id IN (?"+
+				strings.Repeat(",?", len(eventIDs)-1)+
 				") AND canceled_at IS NULL "+
 				" GROUP BY event_id, sheet_id HAVING reserved_at = MIN(reserved_at)",
 			eventIDs...,
@@ -644,8 +644,10 @@ func postReserve(c echo.Context) error {
 		if err := db.QueryRow("SELECT * FROM sheets WHERE id NOT IN (SELECT sheet_id FROM reservations WHERE event_id = ? AND canceled_at IS NULL FOR UPDATE) AND `rank` = ? ORDER BY RAND() LIMIT 1", event.ID, params.Rank).Scan(&sheet.ID, &sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
 			if err == sql.ErrNoRows {
 				return resError(c, "sold_out", 409)
+			} else {
+				return resError(c, "sindoi", 401)
 			}
-			return err
+			//#return err
 		}
 
 		tx, err := db.Begin()
