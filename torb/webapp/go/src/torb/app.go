@@ -631,7 +631,8 @@ func postReserve(c echo.Context) error {
 			if err == sql.ErrNoRows {
 				return resError(c, "sold_out", 409)
 			} else {
-				return resError(c, "sindoi", 401)
+				continue
+				//return resError(c, "sindoi", 401)
 			}
 			//#return err
 		}
