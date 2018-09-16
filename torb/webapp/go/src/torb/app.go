@@ -209,10 +209,18 @@ func getEvents(all bool) ([]*Event, error) {
 
 	// rvss[eventID][sheetID]
 	rvss := make(map[int64]map[int64]Reservation)
-	{
+	if len(events) > 0 {
+		eventIDs := make([]interface {}, len(events))
+		for i, e := range events {
+			eventIDs[i] = e.ID
+		}
+
 		rows2, err := db.Query(
-			"SELECT * FROM reservations WHERE canceled_at IS NULL " +
+			"SELECT * FROM reservations WHERE event_id IN (?" +
+				strings.Repeat(",?", len(eventIDs) - 1) +
+				") AND canceled_at IS NULL "+
 				" GROUP BY event_id, sheet_id HAVING reserved_at = MIN(reserved_at)",
+			eventIDs...,
 		)
 		if err != nil {
 			return nil, err
@@ -1006,8 +1014,10 @@ func main() {
 	e.GET("/admin/api/reports/events/:id/sales", reportSales, adminLoginRequired)
 	e.GET("/admin/api/reports/sales", reportSaleses, adminLoginRequired)
 
-	if true {
+	if os.Getenv("DEBUG_ISUCON") == "" {
 		echopprof.Wrap(e)
+	} else {
+		fmt.Println("debugging...")
 	}
 
 	e.Start(":8080")
