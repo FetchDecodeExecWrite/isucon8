@@ -21,7 +21,6 @@ import (
 	"github.com/labstack/echo"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/middleware"
-	echopprof "github.com/sevenNt/echo-pprof"
 )
 
 type User struct {
@@ -187,6 +186,7 @@ func getLoginAdministrator(c echo.Context) (*Administrator, error) {
 }
 
 type Rvs map[int64]Reservation
+
 var EMPTY_RVS = make(Rvs)
 
 func getEvents(all bool) ([]*Event, error) {
@@ -262,14 +262,14 @@ func getEvents(all bool) ([]*Event, error) {
 				return nil, err
 			}
 			defer sheetRows.Close()
-		
+
 			for sheetRows.Next() {
 				var sheet Sheet
 				if err := sheetRows.Scan(&sheet.ID, &sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
 					return nil, err
 				}
 				completeSheetAndEvent(&sheet, event, rvs, -1, false)
-			}	
+			}
 		}
 
 		for k := range event.Sheets {
@@ -1037,12 +1037,6 @@ func main() {
 	e.POST("/admin/api/events/:id/actions/edit", editAdminEvent, adminLoginRequired)
 	e.GET("/admin/api/reports/events/:id/sales", reportSales, adminLoginRequired)
 	e.GET("/admin/api/reports/sales", reportSaleses, adminLoginRequired)
-
-	if os.Getenv("DEBUG_ISUCON") == "" {
-		echopprof.Wrap(e)
-	} else {
-		fmt.Println("debugging...")
-	}
 
 	e.Start(":8080")
 }
