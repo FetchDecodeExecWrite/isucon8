@@ -1006,8 +1006,10 @@ func main() {
 	e.GET("/admin/api/reports/events/:id/sales", reportSales, adminLoginRequired)
 	e.GET("/admin/api/reports/sales", reportSaleses, adminLoginRequired)
 
-	if true {
+	if os.Getenv("DEBUG_ISUCON") == "" {
 		echopprof.Wrap(e)
+	} else {
+		fmt.Println("debugging...")
 	}
 
 	e.Start(":8080")
