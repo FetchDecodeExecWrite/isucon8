@@ -926,7 +926,7 @@ func reportSales(c echo.Context) error {
 }
 
 func reportSaleses(c echo.Context) error {
-	rows, err := db.Query("select r.*, s.rank as sheet_rank, s.num as sheet_num, s.price as sheet_price, r.event_id, r.event_price as event_price from reservations r inner join sheets s on s.id = r.sheet_id order by reserved_at asc FOR UPDATE")
+	rows, err := db.Query("select r.*, s.rank as sheet_rank, s.num as sheet_num, s.price as sheet_price, r.event_id, r.event_price as event_price from reservations r inner join sheets s on s.id = r.sheet_id order by reserved_at asc")
 	if err != nil {
 		return err
 	}
