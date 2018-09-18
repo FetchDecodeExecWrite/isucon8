@@ -234,7 +234,7 @@ func updateRvss() error {
 	}
 	{
 		// rvss[eventID][sheetID]
-		rows2, err := db.Query("SELECT * FROM reservations WHERE canceled_at >= ?", gRvssLast.Add(-time.Second/100).UTC().Format("2006-01-02 15:04:05.000000"))
+		rows2, err := db.Query("SELECT * FROM reservations WHERE canceled_at >= ?", gRvssLast.Add(-time.Second/10).UTC().Format("2006-01-02 15:04:05.000000"))
 		if err != nil {
 			return err
 		}
@@ -253,7 +253,7 @@ func updateRvss() error {
 	}
 	{
 		// rvss[eventID][sheetID]
-		rows2, err := db.Query("SELECT * FROM reservations WHERE reserved_at >= ?", gRvssLast.Add(-time.Second/100).UTC().Format("2006-01-02 15:04:05.000000"))
+		rows2, err := db.Query("SELECT * FROM reservations WHERE reserved_at >= ?", gRvssLast.Add(-time.Second/10).UTC().Format("2006-01-02 15:04:05.000000"))
 		if err != nil {
 			return err
 		}
@@ -305,11 +305,6 @@ func getEvents(all bool) ([]*Event, error) {
 		rvs, ok := gRvss[event.ID]
 		if !ok {
 			rvs = EMPTY_RVS
-		}
-
-		err := getEventInner(-1, rvs, event)
-		if err != nil {
-			return nil, err
 		}
 
 		event.Total = 1000
@@ -378,12 +373,8 @@ func getEvent(eventID, uid int64) (*Event, error) {
 
 	gRvssRWLock.RLock()
 	defer gRvssRWLock.RUnlock()
-	rvs, _ := gRvss[eventID]
 
-	err := getEventInner(uid, rvs, &event)
-	if err != nil {
-		return nil, err
-	}
+	rvs := gRvss[eventID]
 
 	event.Total = 1000
 	event.Sheets = map[string]*Sheets{
