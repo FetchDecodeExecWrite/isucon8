@@ -382,9 +382,11 @@ func getEventInner(uid int64, rvs Rvs, event *Event) error {
 }
 
 func completeSheetAndEvent(sheet *Sheet, event *Event, rvs Rvs, uid int64, detail bool) {
-	event.Sheets[sheet.Rank].Price = event.Price + sheet.Price
+	sh := event.Sheets[sheet.Rank]
+	sh.Price = event.Price + sheet.Price
+
 	event.Total++
-	event.Sheets[sheet.Rank].Total++
+	sh.Total++
 
 	reservation, ok := rvs[sheet.ID]
 	if ok {
@@ -393,11 +395,11 @@ func completeSheetAndEvent(sheet *Sheet, event *Event, rvs Rvs, uid int64, detai
 		sheet.ReservedAtUnix = reservation.ReservedAt.Unix()
 	} else {
 		event.Remains++
-		event.Sheets[sheet.Rank].Remains++
+		sh.Remains++
 	}
 
 	if detail {
-		event.Sheets[sheet.Rank].Detail = append(event.Sheets[sheet.Rank].Detail, sheet)
+		sh.Detail = append(sh.Detail, sheet)
 	}
 }
 
