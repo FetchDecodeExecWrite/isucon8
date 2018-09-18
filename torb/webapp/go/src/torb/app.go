@@ -19,6 +19,7 @@ import (
 	"github.com/labstack/echo"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/middleware"
+	echopprof "github.com/sevenNt/echo-pprof"
 )
 
 type User struct {
@@ -1078,6 +1079,11 @@ func main() {
 	e.GET("/admin/api/reports/events/:id/sales", reportSales, adminLoginRequired)
 	e.GET("/admin/api/reports/sales", reportSaleses, adminLoginRequired)
 
+	if os.Getenv("DEBUG_ISUCON") == "" {
+		echopprof.Wrap(e)
+	} else {
+		fmt.Println("debugging...")
+	}
 	e.Start(":8080")
 }
 
