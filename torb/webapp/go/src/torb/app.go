@@ -974,6 +974,7 @@ func reportSales(c echo.Context) error {
 		if err := rows.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &reservation.EventPrice, &sheet.Rank, &sheet.Num, &sheet.Price, &event.Price); err != nil {
 			return err
 		}
+		sheet = sheetIDtoSheet(reservation.SheetID)
 		report := Report{
 			ReservationID: reservation.ID,
 			EventID:       event.ID,
@@ -1003,10 +1004,10 @@ func reportSaleses(c echo.Context) error {
 		var reservation Reservation
 		var sheet Sheet
 		var event Event
-		sheet = sheetIDtoSheet(reservation.SheetID)
 		if err := rows.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &reservation.EventPrice, &event.ID, &event.Price); err != nil {
 			return err
 		}
+		sheet = sheetIDtoSheet(reservation.SheetID)
 		report := Report{
 			ReservationID: reservation.ID,
 			EventID:       event.ID,
