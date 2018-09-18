@@ -460,8 +460,8 @@ func initialize(c echo.Context) error {
 		return nil
 	}
 
-	exec.Command("curl http://172.16.21.1/initialize2").Run()
-	exec.Command("curl http://172.16.21.2/initialize2").Run()
+	exec.Command("curl", "http://172.16.21.1/initialize2").Run()
+	exec.Command("curl", "http://172.16.21.2/initialize2").Run()
 	//exec.Command("curl http://172.16.21.3/initialize2").Run()
 
 	return c.NoContent(204)
