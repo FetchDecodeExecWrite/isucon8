@@ -335,11 +335,9 @@ func getEvent(eventID, uid int64) (*Event, error) {
 	}
 	defer rows.Close()
 
-	for rows.Next() {
-		var sheet Sheet
-		if err := rows.Scan(&sheet.ID, &sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
-			return nil, err
-		}
+	for i := 1; i <= 1000; i++ {
+		j := int64(i)
+		sheet := sheetIDtoSheet(j)
 		completeSheetAndEvent(&sheet, &event, rvs, uid, true)
 	}
 
