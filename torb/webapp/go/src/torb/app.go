@@ -224,6 +224,9 @@ func updateRvss() error {
 	now := time.Now()
 	gRvssLock.Lock()
 	defer gRvssLock.Unlock()
+	gRvssRWLock.Lock()
+	defer gRvssRWLock.Unlock()
+
 	if gRvssLast.After(now) {
 		return nil
 	}
@@ -233,7 +236,6 @@ func updateRvss() error {
 		if err != nil {
 			return err
 		}
-		gRvssRWLock.Lock()
 		for rows2.Next() {
 			var rv Reservation
 			err := rows2.Scan(&rv.ID, &rv.EventID, &rv.SheetID, &rv.UserID, &rv.ReservedAt, &rv.CanceledAt, &rv.EventPrice)
@@ -246,7 +248,6 @@ func updateRvss() error {
 			delete(gRvss[rv.EventID], rv.SheetID)
 		}
 		rows2.Close()
-		gRvssRWLock.Unlock()
 	}
 	{
 		// rvss[eventID][sheetID]
@@ -254,7 +255,6 @@ func updateRvss() error {
 		if err != nil {
 			return err
 		}
-		gRvssRWLock.Lock()
 		for rows2.Next() {
 			var rv Reservation
 			err := rows2.Scan(&rv.ID, &rv.EventID, &rv.SheetID, &rv.UserID, &rv.ReservedAt, &rv.CanceledAt, &rv.EventPrice)
@@ -269,7 +269,6 @@ func updateRvss() error {
 			}
 		}
 		rows2.Close()
-		gRvssRWLock.Unlock()
 	}
 	gRvssLast = now
 	return nil
@@ -311,6 +310,7 @@ func getEvents(all bool) ([]*Event, error) {
 	}
 
 	gRvssRWLock.RLock()
+	defer gRvssRWLock.RUnlock()
 	for i, event := range events {
 		rvs, ok := gRvss[event.ID]
 		if !ok {
@@ -331,7 +331,6 @@ func getEvents(all bool) ([]*Event, error) {
 		}
 		events[i] = event
 	}
-	gRvssRWLock.RUnlock()
 	return events, nil
 }
 
@@ -341,6 +340,7 @@ func getEvent(eventID, uid int64) (*Event, error) {
 	}
 
 	gRvssRWLock.RLock()
+	defer gRvssRWLock.RUnlock()
 	rvs, _ := gRvss[eventID]
 
 	var event Event
@@ -358,7 +358,6 @@ func getEvent(eventID, uid int64) (*Event, error) {
 		sheet := sheetIDtoSheet(j)
 		completeSheetAndEvent(&sheet, &event, rvs, uid, true)
 	}
-	gRvssRWLock.RUnlock()
 
 	return &event, nil
 }
