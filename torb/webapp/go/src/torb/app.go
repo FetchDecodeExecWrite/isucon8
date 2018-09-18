@@ -865,7 +865,7 @@ func deleteReserve(c echo.Context) error {
 		}
 
 		var reservation Reservation
-		if err := tx.QueryRow("SELECT * FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at = '0000-00-00 00:00:00' LIMIT 1 FOR UPDATE", event.ID, sheet.ID).Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &reservation.EventPrice); err != nil {
+		if err := tx.QueryRow("SELECT * FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at = '0000-00-00 00:00:00' FOR UPDATE", event.ID, sheet.ID).Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &reservation.EventPrice); err != nil {
 			tx.Rollback()
 			if err == sql.ErrNoRows {
 				return resError(c, "not_reserved", 400)
@@ -1134,6 +1134,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	db.SetMaxIdleConns(10)
 
 	e := echo.New()
 	funcs := template.FuncMap{
