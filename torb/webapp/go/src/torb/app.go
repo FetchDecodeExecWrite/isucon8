@@ -277,7 +277,12 @@ func updateRvss() error {
 }
 
 func getEvents(all bool) ([]*Event, error) {
-	rows, err := db.Query("SELECT * FROM events")
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Commit()
+	rows, err := tx.Query("SELECT * FROM events ORDER BY id ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -672,36 +677,20 @@ func getEventReq(c echo.Context) error {
 		return resError(c, "not_found", 404)
 	}
 
-	eg := errgroup.Group{}
-
 	loginUserID := int64(-1)
-	eg.Go(func() error {
-		if user, err := getLoginUser(c); err == nil {
-			loginUserID = user.ID
-		}
-		return nil
-	})
-
-	var event *Event
-	eg.Go(func() error {
-		var err error
-		event, err = getEvent(eventID, loginUserID)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return resError(c, "not_found", 404)
-			}
-			return err
-		}
-		if !event.PublicFg {
-			return resError(c, "not_found", 404)
-		}
-		return nil
-	})
-
-	if err := eg.Wait(); err != nil {
-		return err
+	if user, err := getLoginUser(c); err == nil {
+		loginUserID = user.ID
 	}
 
+	event, err := getEvent(eventID, loginUserID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return resError(c, "not_found", 404)
+		}
+		return err
+	} else if !event.PublicFg {
+		return resError(c, "not_found", 404)
+	}
 	return c.JSON(200, sanitizeEvent(event))
 }
 
@@ -805,7 +794,7 @@ func deleteReserve(c echo.Context) error {
 		}
 
 		var reservation Reservation
-		if err := tx.QueryRow("SELECT * FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at = '0000-00-00 00:00:00' FOR UPDATE", event.ID, sheet.ID).Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &reservation.EventPrice); err != nil {
+		if err := tx.QueryRow("SELECT * FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at = '0000-00-00 00:00:00' LIMIT 1 FOR UPDATE", event.ID, sheet.ID).Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &reservation.EventPrice); err != nil {
 			tx.Rollback()
 			if err == sql.ErrNoRows {
 				return resError(c, "not_reserved", 400)
