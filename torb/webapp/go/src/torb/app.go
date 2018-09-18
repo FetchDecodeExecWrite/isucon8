@@ -270,22 +270,11 @@ func getEvents(all bool) ([]*Event, error) {
 		}
 	}
 
-	var sheets []*Sheet
-	{
-		sheetRows, err := db.Query("SELECT * FROM sheets ORDER BY `rank`, num")
-		if err != nil {
-			return nil, err
-		}
-		defer sheetRows.Close()
-
-		for sheetRows.Next() {
-			var sheet Sheet
-			if err := sheetRows.Scan(&sheet.ID, &sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
-				return nil, err
-			}
-			sheets = append(sheets, &sheet)
-		}
-		sheetRows.Close()
+	sheets := make([]*Sheet, 0, 1000)
+	for i := 1; i <= 1000; i++ {
+		j := int64(i)
+		s := sheetIDtoSheet(j)
+		sheets = append(sheets, &s)
 	}
 
 	for i, event := range events {
