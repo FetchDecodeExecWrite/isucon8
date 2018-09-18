@@ -751,7 +751,8 @@ func postReserve(c echo.Context) error {
 			return err
 		}
 
-		if _, err := tx.Exec("SELECT id FROM event_id = ? AND sheet_id = ? AND canceled_at = '0000-00-00 00:00:00' FOR UPDATE", event.ID, sheet.ID); err != nil {
+		if _, err := tx.Exec("SELECT id FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at = '0000-00-00 00:00:00' FOR UPDATE", event.ID, sheet.ID); err != nil {
+			log.Println(err)
 			if err != sql.ErrNoRows {
 				tx.Rollback()
 				continue
