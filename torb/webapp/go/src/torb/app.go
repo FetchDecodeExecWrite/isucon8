@@ -663,11 +663,6 @@ func postReserve(c echo.Context) error {
 	var sheet Sheet
 	var reservationID int64
 	for {
-		tx, err := db.Begin()
-		if err != nil {
-			return err
-		}
-
 		if err := db.QueryRow("SELECT * FROM sheets WHERE id NOT IN (SELECT sheet_id FROM reservations WHERE event_id = ? AND canceled_at IS NULL) AND `rank` = ? ORDER BY RAND() LIMIT 1", event.ID, params.Rank).Scan(&sheet.ID, &sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
 			if err == sql.ErrNoRows {
 				return resError(c, "sold_out", 409)
@@ -675,24 +670,16 @@ func postReserve(c echo.Context) error {
 			return err
 		}
 
-		res, err := tx.Exec("INSERT INTO reservations (event_id, sheet_id, user_id, reserved_at, event_price) VALUES (?, ?, ?, ?, ?)", event.ID, sheet.ID, user.ID, time.Now().UTC().Format("2006-01-02 15:04:05.000000"), event.Price)
+		res, err := db.Exec("INSERT INTO reservations (event_id, sheet_id, user_id, reserved_at, event_price) VALUES (?, ?, ?, ?, ?)", event.ID, sheet.ID, user.ID, time.Now().UTC().Format("2006-01-02 15:04:05.000000"), event.Price)
 		if err != nil {
-			tx.Rollback()
 			log.Println("re-try: rollback by", err)
 			continue
 		}
 		reservationID, err = res.LastInsertId()
 		if err != nil {
-			tx.Rollback()
 			log.Println("re-try: rollback by", err)
 			continue
 		}
-		if err := tx.Commit(); err != nil {
-			tx.Rollback()
-			log.Println("re-try: rollback by", err)
-			continue
-		}
-
 		break
 	}
 	return c.JSON(202, echo.Map{
