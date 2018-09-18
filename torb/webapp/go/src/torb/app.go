@@ -214,9 +214,10 @@ var EMPTY_RVS = make(Rvs)
 
 var (
 	// rvss[eventID][sheetID]
-	gRvss     = make(map[int64]map[int64]Reservation)
-	gRvssLock sync.Mutex
-	gRvssLast time.Time
+	gRvss       = make(map[int64]map[int64]Reservation)
+	gRvssLock   sync.Mutex
+	gRvssRWLock sync.RWMutex
+	gRvssLast   time.Time
 )
 
 func updateRvss() error {
@@ -232,6 +233,7 @@ func updateRvss() error {
 		if err != nil {
 			return err
 		}
+		gRvssRWLock.Lock()
 		for rows2.Next() {
 			var rv Reservation
 			err := rows2.Scan(&rv.ID, &rv.EventID, &rv.SheetID, &rv.UserID, &rv.ReservedAt, &rv.CanceledAt, &rv.EventPrice)
@@ -244,6 +246,7 @@ func updateRvss() error {
 			delete(gRvss[rv.EventID], rv.SheetID)
 		}
 		rows2.Close()
+		gRvssRWLock.Unlock()
 	}
 	{
 		// rvss[eventID][sheetID]
@@ -251,6 +254,7 @@ func updateRvss() error {
 		if err != nil {
 			return err
 		}
+		gRvssRWLock.Lock()
 		for rows2.Next() {
 			var rv Reservation
 			err := rows2.Scan(&rv.ID, &rv.EventID, &rv.SheetID, &rv.UserID, &rv.ReservedAt, &rv.CanceledAt, &rv.EventPrice)
@@ -265,6 +269,7 @@ func updateRvss() error {
 			}
 		}
 		rows2.Close()
+		gRvssRWLock.Unlock()
 	}
 	gRvssLast = now
 	return nil
@@ -305,6 +310,7 @@ func getEvents(all bool) ([]*Event, error) {
 		return nil, err
 	}
 
+	gRvssRWLock.RLock()
 	for i, event := range events {
 		rvs, ok := gRvss[event.ID]
 		if !ok {
@@ -325,6 +331,7 @@ func getEvents(all bool) ([]*Event, error) {
 		}
 		events[i] = event
 	}
+	gRvssRWLock.RUnlock()
 	return events, nil
 }
 
@@ -333,7 +340,9 @@ func getEvent(eventID, uid int64) (*Event, error) {
 		return nil, err
 	}
 
+	gRvssRWLock.RLock()
 	rvs, _ := gRvss[eventID]
+	gRvssRWLock.RUnlock()
 
 	var event Event
 	if err := db.QueryRow("SELECT * FROM events WHERE id = ?", eventID).Scan(&event.ID, &event.Title, &event.PublicFg, &event.ClosedFg, &event.Price); err != nil {
