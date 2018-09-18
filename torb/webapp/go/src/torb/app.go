@@ -249,8 +249,7 @@ func getEvents(all bool) ([]*Event, error) {
 		rows2, err := db.Query(
 			"SELECT * FROM reservations WHERE event_id IN (?"+
 				strings.Repeat(",?", len(eventIDs)-1)+
-				") AND canceled_at IS NULL "+
-				" GROUP BY event_id, sheet_id HAVING id = MIN(id)",
+				") AND canceled_at IS NULL ",
 			eventIDs...,
 		)
 		if err != nil {
@@ -301,11 +300,7 @@ func getEvents(all bool) ([]*Event, error) {
 }
 
 func getEvent(eventID, uid int64) (*Event, error) {
-	rows2, err := db.Query(
-		"SELECT * FROM reservations WHERE event_id = ? AND canceled_at IS NULL "+
-			" GROUP BY event_id, sheet_id HAVING reserved_at = MIN(reserved_at)",
-		eventID,
-	)
+	rows2, err := db.Query("SELECT * FROM reservations WHERE event_id = ? AND canceled_at IS NULL", eventID)
 	if err != nil {
 		return nil, err
 	}
@@ -536,7 +531,7 @@ func getUser(c echo.Context) error {
 	}
 
 	var totalPrice int
-	if err := db.QueryRow("SELECT IFNULL(SUM(e.price + s.price), 0) FROM reservations r INNER JOIN sheets s ON s.id = r.sheet_id INNER JOIN events e ON e.id = r.event_id WHERE r.user_id = ? AND r.canceled_at IS NULL", user.ID).Scan(&totalPrice); err != nil {
+	if err := db.QueryRow("SELECT IFNULL(SUM(r.event_price + s.price), 0) FROM reservations r INNER JOIN sheets s ON s.id = r.sheet_id WHERE r.user_id = ? AND r.canceled_at IS NULL", user.ID).Scan(&totalPrice); err != nil {
 		return err
 	}
 
