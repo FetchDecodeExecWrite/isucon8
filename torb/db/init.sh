@@ -22,4 +22,5 @@ mysql -uisucon torb -e "ALTER TABLE reservations ADD INDEX event_cancel (event_i
 mysql -uisucon torb -e "ALTER TABLE reservations ADD UNIQUE uniq3 (event_id, sheet_id, canceled_at)"&
 
 
+mysql -uisucon torb -e 'update reservations set canceled_at = 0 where canceled_at IS NULL'
 mysql -uisucon torb -e 'update reservations set event_price = (select price from events where id = reservations.event_id)'
