@@ -249,7 +249,7 @@ func getEvents(all bool) ([]*Event, error) {
 		rows2, err := db.Query(
 			"SELECT * FROM reservations WHERE event_id IN (?"+
 				strings.Repeat(",?", len(eventIDs)-1)+
-				") AND canceled_at > 5",
+				") AND canceled_at < 5",
 			eventIDs...,
 		)
 		if err != nil {
@@ -300,7 +300,7 @@ func getEvents(all bool) ([]*Event, error) {
 }
 
 func getEvent(eventID, uid int64) (*Event, error) {
-	rows2, err := db.Query("SELECT * FROM reservations WHERE event_id = ? AND canceled_at > 5", eventID)
+	rows2, err := db.Query("SELECT * FROM reservations WHERE event_id = ? AND canceled_at < 5", eventID)
 	if err != nil {
 		return nil, err
 	}
@@ -525,7 +525,7 @@ func getUser(c echo.Context) error {
 	}
 
 	var totalPrice int
-	if err := db.QueryRow("SELECT IFNULL(SUM(r.event_price + s.price), 0) FROM reservations r INNER JOIN sheets s ON s.id = r.sheet_id WHERE r.user_id = ? AND r.canceled_at > 5", user.ID).Scan(&totalPrice); err != nil {
+	if err := db.QueryRow("SELECT IFNULL(SUM(r.event_price + s.price), 0) FROM reservations r INNER JOIN sheets s ON s.id = r.sheet_id WHERE r.user_id = ? AND r.canceled_at < 5", user.ID).Scan(&totalPrice); err != nil {
 		return err
 	}
 
@@ -663,7 +663,7 @@ func postReserve(c echo.Context) error {
 	var sheet Sheet
 	var reservationID int64
 	for {
-		if err := db.QueryRow("SELECT * FROM sheets WHERE id NOT IN (SELECT sheet_id FROM reservations WHERE event_id = ? AND canceled_at > 5) AND `rank` = ? ORDER BY RAND() LIMIT 1", event.ID, params.Rank).Scan(&sheet.ID, &sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
+		if err := db.QueryRow("SELECT * FROM sheets WHERE id NOT IN (SELECT sheet_id FROM reservations WHERE event_id = ? AND canceled_at < 5) AND `rank` = ? ORDER BY RAND() LIMIT 1", event.ID, params.Rank).Scan(&sheet.ID, &sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
 			if err == sql.ErrNoRows {
 				return resError(c, "sold_out", 409)
 			}
@@ -731,7 +731,7 @@ func deleteReserve(c echo.Context) error {
 		}
 
 		var reservation Reservation
-		if err := tx.QueryRow("SELECT * FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at > 5 LIMIT 1 FOR UPDATE", event.ID, sheet.ID).Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &reservation.EventPrice); err != nil {
+		if err := tx.QueryRow("SELECT * FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at < 5 LIMIT 1 FOR UPDATE", event.ID, sheet.ID).Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &reservation.EventPrice); err != nil {
 			tx.Rollback()
 			if err == sql.ErrNoRows {
 				return resError(c, "not_reserved", 400)
