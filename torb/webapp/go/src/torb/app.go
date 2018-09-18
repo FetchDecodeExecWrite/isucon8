@@ -746,16 +746,26 @@ func postReserve(c echo.Context) error {
 			return err
 		}
 
-		res, err := db.Exec("INSERT INTO reservations (event_id, sheet_id, user_id, reserved_at, event_price) VALUES (?, ?, ?, ?, ?)", event.ID, sheet.ID, user.ID, time.Now().UTC().Format("2006-01-02 15:04:05.000000"), event.Price)
+		tx, err := db.Begin()
 		if err != nil {
+			return err
+		}
+
+		tx.Exec("SELECT id FROM event_id = ? AND sheet_id = ? AND canceled_at = '0000-00-00 00:00:00' FOR UPDATE", event.ID, sheet.ID)
+
+		res, err := tx.Exec("INSERT INTO reservations (event_id, sheet_id, user_id, reserved_at, event_price) VALUES (?, ?, ?, ?, ?)", event.ID, sheet.ID, user.ID, time.Now().UTC().Format("2006-01-02 15:04:05.000000"), event.Price)
+		if err != nil {
+			tx.Rollback()
 			log.Println("re-try: rollback by", err)
 			continue
 		}
 		reservationID, err = res.LastInsertId()
 		if err != nil {
+			tx.Rollback()
 			log.Println("re-try: rollback by", err)
 			continue
 		}
+		tx.Commit()
 		break
 	}
 	return c.JSON(202, echo.Map{
