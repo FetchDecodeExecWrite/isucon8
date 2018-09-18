@@ -295,13 +295,6 @@ func getEvents(all bool) ([]*Event, error) {
 		events = append(events, &event)
 	}
 
-	sheets := make([]*Sheet, 0, 1000)
-	for i := 1; i <= 1000; i++ {
-		j := int64(i)
-		s := sheetIDtoSheet(j)
-		sheets = append(sheets, &s)
-	}
-
 	if err := updateRvss(); err != nil {
 		return nil, err
 	}
@@ -319,8 +312,19 @@ func getEvents(all bool) ([]*Event, error) {
 			return nil, err
 		}
 
-		for _, sheet := range sheets {
-			completeSheetAndEvent(sheet, event, rvs, -1, false)
+		for i := 1; i <= 1000; i++ {
+			j := int64(i)
+			s := sheetIDtoSheet(j)
+			sheet := &s
+
+			reservation, ok := rvs[sheet.ID]
+			if ok {
+				sheet.Reserved = true
+				sheet.ReservedAtUnix = reservation.ReservedAt.Unix()
+			} else {
+				event.Remains++
+				event.Sheets[sheet.Rank].Remains++
+			}
 		}
 
 		for k := range event.Sheets {
@@ -361,10 +365,42 @@ func getEvent(eventID, uid int64) (*Event, error) {
 		return nil, err
 	}
 
+	event.Total = 1000
+	event.Sheets = map[string]*Sheets{
+		"S": &Sheets{
+			Total: 50,
+			Price: 5000 + event.Price,
+		},
+		"A": &Sheets{
+			Total: 150,
+			Price: 3000 + event.Price,
+		},
+		"B": &Sheets{
+			Total: 300,
+			Price: 1000 + event.Price,
+		},
+		"C": &Sheets{
+			Total: 500,
+			Price: 0 + event.Price,
+		},
+	}
+
 	for i := 1; i <= 1000; i++ {
 		j := int64(i)
-		sheet := sheetIDtoSheet(j)
-		completeSheetAndEvent(&sheet, &event, rvs, uid, true)
+		s := sheetIDtoSheet(j)
+		sheet := &s
+
+		reservation, ok := rvs[sheet.ID]
+		if ok {
+			sheet.Mine = reservation.UserID == uid
+			sheet.Reserved = true
+			sheet.ReservedAtUnix = reservation.ReservedAt.Unix()
+		} else {
+			event.Remains++
+			event.Sheets[sheet.Rank].Remains++
+		}
+
+		event.Sheets[sheet.Rank].Detail = append(event.Sheets[sheet.Rank].Detail, sheet)
 	}
 
 	return &event, nil
