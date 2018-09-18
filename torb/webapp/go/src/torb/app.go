@@ -441,6 +441,16 @@ func index(c echo.Context) error {
 		"origin": c.Scheme() + "://" + c.Request().Host,
 	})
 }
+
+func initialize2(c echo.Context) error {
+	gRvss = make(map[int64]map[int64]Reservation)
+	gRvssLast = time.Time{}
+	if err := updateRvss(); err != nil {
+		return err
+	}
+	return c.NoContent(204)
+}
+
 func initialize(c echo.Context) error {
 	cmd := exec.Command("../../db/init.sh")
 	cmd.Stdin = os.Stdin
@@ -450,11 +460,9 @@ func initialize(c echo.Context) error {
 		return nil
 	}
 
-	gRvss = make(map[int64]map[int64]Reservation)
-	gRvssLast = time.Time{}
-	if err := updateRvss(); err != nil {
-		return err
-	}
+	exec.Command("curl http://172.16.21.1/initialize2").Run()
+	exec.Command("curl http://172.16.21.2/initialize2").Run()
+	//exec.Command("curl http://172.16.21.3/initialize2").Run()
 
 	return c.NoContent(204)
 }
@@ -1043,6 +1051,7 @@ func main() {
 	e.Static("/", "public")
 
 	e.GET("/", index, fillinUser)
+	e.GET("/initialize2", initialize2)
 	e.GET("/initialize", initialize)
 	e.POST("/api/users", users)
 	e.GET("/api/users/:id", getUser, loginRequired)
