@@ -312,6 +312,26 @@ func getEvents(all bool) ([]*Event, error) {
 			return nil, err
 		}
 
+		event.Total = 1000
+		event.Sheets = map[string]*Sheets{
+			"S": &Sheets{
+				Total: 50,
+				Price: 5000 + event.Price,
+			},
+			"A": &Sheets{
+				Total: 150,
+				Price: 3000 + event.Price,
+			},
+			"B": &Sheets{
+				Total: 300,
+				Price: 1000 + event.Price,
+			},
+			"C": &Sheets{
+				Total: 500,
+				Price: 0 + event.Price,
+			},
+		}
+
 		for i := 1; i <= 1000; i++ {
 			j := int64(i)
 			s := sheetIDtoSheet(j)
