@@ -529,7 +529,7 @@ func getUser(c echo.Context) error {
 		return err
 	}
 
-	rows, err = db.Query("SELECT event_id FROM reservations WHERE user_id = ? GROUP BY event_id ORDER BY MAX(IF(canceled_at = '0000-00-00 00:00:00', canceled_at, reserved_at)) DESC LIMIT 5", user.ID)
+	rows, err = db.Query("SELECT event_id FROM reservations WHERE user_id = ? GROUP BY event_id ORDER BY MAX(IF(canceled_at > '0000-00-00 00:00:00', canceled_at, reserved_at)) DESC LIMIT 5", user.ID)
 	if err != nil {
 		return err
 	}
