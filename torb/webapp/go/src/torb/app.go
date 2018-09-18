@@ -98,15 +98,15 @@ func sheetIDtoSheet(id int64) Sheet {
 		+-----+------+-----+-------+
 	*/
 	if id > 500 {
-		return Sheet{ID: id, Rank: "C", Num: 1, Price: 0}
+		return Sheet{ID: id, Rank: "C", Num: id - 500, Price: 0}
 	}
 	if id > 200 {
-		return Sheet{ID: id, Rank: "B", Num: 1, Price: 1000}
+		return Sheet{ID: id, Rank: "B", Num: id - 200, Price: 1000}
 	}
 	if id > 50 {
-		return Sheet{ID: id, Rank: "A", Num: 1, Price: 3000}
+		return Sheet{ID: id, Rank: "A", Num: id - 50, Price: 3000}
 	}
-	return Sheet{ID: id, Rank: "S", Num: 1, Price: 5000}
+	return Sheet{ID: id, Rank: "S", Num: id, Price: 5000}
 
 }
 
