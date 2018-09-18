@@ -234,7 +234,7 @@ func updateRvss() error {
 	}
 	{
 		// rvss[eventID][sheetID]
-		rows2, err := db.Query("SELECT * FROM reservations WHERE canceled_at >= ?", gRvssLast.Add(-time.Second).UTC().Format("2006-01-02 15:04:05.000000"))
+		rows2, err := db.Query("SELECT * FROM reservations WHERE canceled_at >= ?", gRvssLast.Add(-time.Second/5).UTC().Format("2006-01-02 15:04:05.000000"))
 		if err != nil {
 			return err
 		}
@@ -253,7 +253,7 @@ func updateRvss() error {
 	}
 	{
 		// rvss[eventID][sheetID]
-		rows2, err := db.Query("SELECT * FROM reservations WHERE reserved_at >= ?", gRvssLast.Add(-time.Second).UTC().Format("2006-01-02 15:04:05.000000"))
+		rows2, err := db.Query("SELECT * FROM reservations WHERE reserved_at >= ?", gRvssLast.Add(-time.Second/5).UTC().Format("2006-01-02 15:04:05.000000"))
 		if err != nil {
 			return err
 		}
@@ -277,12 +277,7 @@ func updateRvss() error {
 }
 
 func getEvents(all bool) ([]*Event, error) {
-	tx, err := db.Begin()
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Commit()
-	rows, err := tx.Query("SELECT * FROM events ORDER BY id ASC")
+	rows, err := db.Query("SELECT * FROM events")
 	if err != nil {
 		return nil, err
 	}
