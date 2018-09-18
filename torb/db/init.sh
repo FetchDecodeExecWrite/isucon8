@@ -15,4 +15,11 @@ if [ ! -f "$DB_DIR/isucon8q-initial-dataset.sql.gz" ]; then
 fi
 
 gzip -dc "$DB_DIR/isucon8q-initial-dataset.sql.gz" | mysql -uisucon torb
+
+mysql -uisucon torb -e "ALTER TABLE sheets ADD UNIQUE rank_num_uniq (\`rank\`, num)"&
+mysql -uisucon torb -e "ALTER TABLE reservations ADD INDEX user_id (user_id)"&
+mysql -uisucon torb -e "ALTER TABLE reservations ADD INDEX event_cancel (event_id, canceled_at)"&
+mysql -uisucon torb -e "ALTER TABLE reservations ADD UNIQUE uniq3 (event_id, sheet_id, canceled_at)"&
+
+
 mysql -uisucon torb -e 'update reservations set event_price = (select price from events where id = reservations.event_id)'

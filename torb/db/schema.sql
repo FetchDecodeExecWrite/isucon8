@@ -18,8 +18,7 @@ CREATE TABLE IF NOT EXISTS sheets (
     id          INTEGER UNSIGNED PRIMARY KEY AUTO_INCREMENT,
     `rank`      VARCHAR(128)     NOT NULL,
     num         INTEGER UNSIGNED NOT NULL,
-    price       INTEGER UNSIGNED NOT NULL,
-    UNIQUE KEY rank_num_uniq (`rank`, num)
+    price       INTEGER UNSIGNED NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS reservations (
@@ -29,10 +28,7 @@ CREATE TABLE IF NOT EXISTS reservations (
     user_id     INTEGER UNSIGNED NOT NULL,
     reserved_at DATETIME(6)      NOT NULL,
     canceled_at DATETIME(6)      DEFAULT '0000-00-00 00:00:00',
-    event_price INTEGER UNSIGNED NOT NULL,
-    KEY user_id (user_id),
-    KEY event_cancel (event_id, canceled_at),
-    UNIQUE KEY uniq3 (event_id, sheet_id, canceled_at)
+    event_price INTEGER UNSIGNED NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS administrators (
