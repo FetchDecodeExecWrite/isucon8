@@ -1064,7 +1064,7 @@ func renderReportCSV(c echo.Context, reports []Report) error {
 	c.Response().Header().Set("Content-Type", `text/csv; charset=UTF-8`)
 	c.Response().Header().Set("Content-Disposition", `attachment; filename="report.csv"`)
 
-	body := c.Reponse()
+	body := c.Response()
 	body.Write([]byte("reservation_id,event_id,rank,num,price,user_id,sold_at,canceled_at\n"))
 	for _, v := range reports {
 		body.Write([]byte(fmt.Sprintf("%d,%d,%s,%d,%d,%d,%s,%s\n",
