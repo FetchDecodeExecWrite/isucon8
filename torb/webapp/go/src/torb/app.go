@@ -960,7 +960,7 @@ func postAdminEvents(c echo.Context) error {
 		return err
 	}
 
-	res, err := tx.Exec("INSERT INTO events (id, title, public_fg, closed_fg, price) VALUES (RANDOM(), ?, ?, 0, ?)", params.Title, params.Public, params.Price)
+	res, err := tx.Exec("INSERT INTO events (title, public_fg, closed_fg, price) VALUES (?, ?, 0, ?)", params.Title, params.Public, params.Price)
 	if err != nil {
 		tx.Rollback()
 		return err
