@@ -698,7 +698,7 @@ func getEventReq(c echo.Context) error {
 		return nil
 	})
 
-	if err = eg.Wait(); err != nil || event == nil {
+	if err := eg.Wait(); err != nil {
 		return err
 	}
 
