@@ -858,7 +858,7 @@ func deleteReserve(c echo.Context) error {
 		return err
 	}
 
-	for {
+	for i := 0; i < 20; i++ {
 		tx, err := db.Begin()
 		if err != nil {
 			return err
@@ -889,10 +889,10 @@ func deleteReserve(c echo.Context) error {
 		if err := tx.Commit(); err != nil {
 			return err
 		}
-		break
+		return c.NoContent(204)
 	}
 
-	return c.NoContent(204)
+	return resError(c, "retry exceed", 555)
 }
 
 func getAdmin(c echo.Context) error {
