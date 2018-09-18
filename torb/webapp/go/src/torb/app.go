@@ -250,7 +250,7 @@ func getEvents(all bool) ([]*Event, error) {
 			"SELECT * FROM reservations WHERE event_id IN (?"+
 				strings.Repeat(",?", len(eventIDs)-1)+
 				") AND canceled_at IS NULL "+
-				" GROUP BY event_id, sheet_id HAVING reserved_at = MIN(reserved_at)",
+				" GROUP BY event_id, sheet_id HAVING id = MIN(id)",
 			eventIDs...,
 		)
 		if err != nil {
