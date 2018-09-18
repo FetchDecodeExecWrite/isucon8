@@ -337,18 +337,29 @@ func getEvents(all bool) ([]*Event, error) {
 }
 
 func getEvent(eventID, uid int64) (*Event, error) {
-	if err := updateRvss(); err != nil {
+	eg := errgroup.Group{}
+	eg.Go(func() error {
+		if err := updateRvss(); err != nil {
+			return err
+		}
+		return nil
+	})
+
+	var event Event
+	eg.Go(func() error {
+		if err := db.QueryRow("SELECT * FROM events WHERE id = ?", eventID).Scan(&event.ID, &event.Title, &event.PublicFg, &event.ClosedFg, &event.Price); err != nil {
+			return err
+		}
+		return nil
+	})
+
+	if err := eg.Wait(); err != nil {
 		return nil, err
 	}
 
 	gRvssRWLock.RLock()
 	defer gRvssRWLock.RUnlock()
 	rvs, _ := gRvss[eventID]
-
-	var event Event
-	if err := db.QueryRow("SELECT * FROM events WHERE id = ?", eventID).Scan(&event.ID, &event.Title, &event.PublicFg, &event.ClosedFg, &event.Price); err != nil {
-		return nil, err
-	}
 
 	err := getEventInner(uid, rvs, &event)
 	if err != nil {
@@ -661,6 +672,7 @@ func logout(c echo.Context) error {
 	sessDeleteUserID(c)
 	return c.NoContent(204)
 }
+
 func getEventsReq(c echo.Context) error {
 	events, err := getEvents(true)
 	if err != nil {
@@ -671,6 +683,7 @@ func getEventsReq(c echo.Context) error {
 	}
 	return c.JSON(200, events)
 }
+
 func getEventReq(c echo.Context) error {
 	eventID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
