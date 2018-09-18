@@ -17,6 +17,5 @@ fi
 gzip -dc "$DB_DIR/isucon8q-initial-dataset.sql.gz" | mysql -uisucon torb
 mysql -uisucon torb -e 'create index user_id on reservations(user_id);'&
 mysql -uisucon torb -e 'alter table reservations  add index  hoge (event_id, canceled_at);'&
-mysql -uisucon torb -e 'alter table reservations add column event_price int'
 mysql -uisucon torb -e 'update reservations set event_price = (select price from events where id = reservations.event_id)'
 #mysql -uisucon torb -e 'alter table sheets  add index  fuga (rank, num);'
