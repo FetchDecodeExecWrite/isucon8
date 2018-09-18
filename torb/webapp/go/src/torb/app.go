@@ -85,6 +85,31 @@ type Administrator struct {
 	PassHash  string `json:"pass_hash,omitempty"`
 }
 
+func sheetIDtoSheet(id int64) Sheet {
+	/*
+
+		+-----+------+-----+-------+
+		| id  | rank | num | price |
+		+-----+------+-----+-------+
+		| 501 | C    |   1 |     0 |
+		| 201 | B    |   1 |  1000 |
+		|  51 | A    |   1 |  3000 |
+		|   1 | S    |   1 |  5000 |
+		+-----+------+-----+-------+
+	*/
+	if id > 500 {
+		return Sheet{ID: id, Rank: "C", Num: 1, Price: 0}
+	}
+	if id > 200 {
+		return Sheet{ID: id, Rank: "B", Num: 1, Price: 1000}
+	}
+	if id > 500 {
+		return Sheet{ID: id, Rank: "A", Num: 1, Price: 3000}
+	}
+	return Sheet{ID: id, Rank: "S", Num: 1, Price: 5000}
+
+}
+
 func sessUserID(c echo.Context) int64 {
 	sess, _ := session.Get("session", c)
 	var userID int64
@@ -967,7 +992,7 @@ func reportSales(c echo.Context) error {
 }
 
 func reportSaleses(c echo.Context) error {
-	rows, err := db.Query("select r.*, s.rank as sheet_rank, s.num as sheet_num, s.price as sheet_price, r.event_id, r.event_price as event_price from reservations r inner join sheets s on s.id = r.sheet_id")
+	rows, err := db.Query("select r.*, r.event_id, r.event_price as event_price from reservations r")
 	if err != nil {
 		return err
 	}
@@ -978,7 +1003,8 @@ func reportSaleses(c echo.Context) error {
 		var reservation Reservation
 		var sheet Sheet
 		var event Event
-		if err := rows.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &reservation.EventPrice, &sheet.Rank, &sheet.Num, &sheet.Price, &event.ID, &event.Price); err != nil {
+		sheet = sheetIDtoSheet(reservation.SheetID)
+		if err := rows.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &reservation.EventPrice, &event.ID, &event.Price); err != nil {
 			return err
 		}
 		report := Report{
