@@ -993,36 +993,42 @@ func reportSales(c echo.Context) error {
 }
 
 func reportSaleses(c echo.Context) error {
-	rows, err := db.Query("select r.*, r.event_id, r.event_price as event_price from reservations r")
+	rows, err := db.Query("select * from reservations")
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 
-	var reports []Report
+	c.Response().Header().Set("Content-Type", `text/csv; charset=UTF-8`)
+	c.Response().Header().Set("Content-Disposition", `attachment; filename="report.csv"`)
+	body := c.Response()
+	body.Write([]byte("reservation_id,event_id,rank,num,price,user_id,sold_at,canceled_at\n"))
+
 	for rows.Next() {
 		var reservation Reservation
 		var sheet Sheet
-		var event Event
-		if err := rows.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &reservation.EventPrice, &event.ID, &event.Price); err != nil {
+		if err := rows.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &reservation.EventPrice); err != nil {
 			return err
 		}
 		sheet = sheetIDtoSheet(reservation.SheetID)
 		report := Report{
 			ReservationID: reservation.ID,
-			EventID:       event.ID,
+			EventID:       reservation.EventID,
 			Rank:          sheet.Rank,
 			Num:           sheet.Num,
 			UserID:        reservation.UserID,
 			SoldAt:        reservation.ReservedAt.Format("2006-01-02T15:04:05.000000Z"),
-			Price:         event.Price + sheet.Price,
+			Price:         reservation.EventPrice + sheet.Price,
 		}
 		if reservation.CanceledAt != nil {
 			report.CanceledAt = reservation.CanceledAt.Format("2006-01-02T15:04:05.000000Z")
 		}
-		reports = append(reports, report)
+
+		body.Write([]byte(fmt.Sprintf("%d,%d,%s,%d,%d,%d,%s,%s\n",
+			report.ReservationID, report.EventID, report.Rank, report.Num, report.Price, report.UserID, report.SoldAt, report.CanceledAt)))
 	}
-	return renderReportCSV(c, reports)
+	return nil
+	//return renderReportCSV(c, reports)
 }
 
 func main() {
