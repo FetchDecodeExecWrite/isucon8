@@ -1,7 +1,6 @@
 package main
 
 import (
-	//"bytes"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -11,9 +10,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	//"sort"
 	"strconv"
-	"strings"
+	"sync"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -214,6 +212,65 @@ type Rvs map[int64]Reservation
 
 var EMPTY_RVS = make(Rvs)
 
+var (
+	// rvss[eventID][sheetID]
+	gRvss     = make(map[int64]map[int64]Reservation)
+	gRvssLock sync.Mutex
+	gRvssLast time.Time
+)
+
+func updateRvss() error {
+	now := time.Now()
+	gRvssLock.Lock()
+	defer gRvssLock.Unlock()
+	if gRvssLast.After(now) {
+		return nil
+	}
+	{
+		// rvss[eventID][sheetID]
+		rows2, err := db.Query("SELECT * FROM reservations WHERE canceled_at >= ?", gRvssLast.UTC().Format("2006-01-02 15:04:05.000000"))
+		if err != nil {
+			return err
+		}
+		for rows2.Next() {
+			var rv Reservation
+			err := rows2.Scan(&rv.ID, &rv.EventID, &rv.SheetID, &rv.UserID, &rv.ReservedAt, &rv.CanceledAt, &rv.EventPrice)
+			if err != nil {
+				return err
+			}
+			if _, ok := gRvss[rv.EventID]; !ok {
+				continue
+			}
+			delete(gRvss[rv.EventID], rv.SheetID)
+		}
+		rows2.Close()
+	}
+	{
+		// rvss[eventID][sheetID]
+		rows2, err := db.Query("SELECT * FROM reservations WHERE reserved_at >= ?", gRvssLast.UTC().Format("2006-01-02 15:04:05.000000"))
+		if err != nil {
+			return err
+		}
+		for rows2.Next() {
+			var rv Reservation
+			err := rows2.Scan(&rv.ID, &rv.EventID, &rv.SheetID, &rv.UserID, &rv.ReservedAt, &rv.CanceledAt, &rv.EventPrice)
+			if err != nil {
+				return err
+			}
+			if _, ok := gRvss[rv.EventID]; !ok {
+				gRvss[rv.EventID] = make(map[int64]Reservation)
+			}
+			gRvss[rv.EventID][rv.SheetID] = rv
+			if rv.CanceledAt.Unix() > 0 {
+				delete(gRvss[rv.EventID], rv.SheetID)
+			}
+		}
+		rows2.Close()
+	}
+	gRvssLast = now
+	return nil
+}
+
 func getEvents(all bool) ([]*Event, error) {
 	tx, err := db.Begin()
 	if err != nil {
@@ -238,37 +295,6 @@ func getEvents(all bool) ([]*Event, error) {
 		events = append(events, &event)
 	}
 
-	// rvss[eventID][sheetID]
-	rvss := make(map[int64]map[int64]Reservation)
-	if len(events) > 0 {
-		eventIDs := make([]interface{}, len(events))
-		for i, e := range events {
-			eventIDs[i] = e.ID
-		}
-
-		rows2, err := db.Query(
-			"SELECT * FROM reservations WHERE event_id IN (?"+
-				strings.Repeat(",?", len(eventIDs)-1)+
-				") AND canceled_at = '0000-00-00 00:00:00'",
-			eventIDs...,
-		)
-		if err != nil {
-			return nil, err
-		}
-		defer rows2.Close()
-		for rows2.Next() {
-			var rv Reservation
-			err := rows2.Scan(&rv.ID, &rv.EventID, &rv.SheetID, &rv.UserID, &rv.ReservedAt, &rv.CanceledAt, &rv.EventPrice)
-			if err != nil {
-				return nil, err
-			}
-			if _, ok := rvss[rv.EventID]; !ok {
-				rvss[rv.EventID] = make(map[int64]Reservation)
-			}
-			rvss[rv.EventID][rv.SheetID] = rv
-		}
-	}
-
 	sheets := make([]*Sheet, 0, 1000)
 	for i := 1; i <= 1000; i++ {
 		j := int64(i)
@@ -276,8 +302,12 @@ func getEvents(all bool) ([]*Event, error) {
 		sheets = append(sheets, &s)
 	}
 
+	if err := updateRvss(); err != nil {
+		return nil, err
+	}
+
 	for i, event := range events {
-		rvs, ok := rvss[event.ID]
+		rvs, ok := gRvss[event.ID]
 		if !ok {
 			rvs = EMPTY_RVS
 		}
@@ -300,26 +330,18 @@ func getEvents(all bool) ([]*Event, error) {
 }
 
 func getEvent(eventID, uid int64) (*Event, error) {
-	rows2, err := db.Query("SELECT * FROM reservations WHERE event_id = ? AND canceled_at = '0000-00-00 00:00:00'", eventID)
-	if err != nil {
+	if err := updateRvss(); err != nil {
 		return nil, err
 	}
-	defer rows2.Close()
-	rvs := make(map[int64]Reservation)
-	for rows2.Next() {
-		var reservation Reservation
-		err := rows2.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &reservation.EventPrice)
-		if err != nil {
-			return nil, err
-		}
-		rvs[reservation.SheetID] = reservation
-	}
+
+	rvs, _ := gRvss[eventID]
 
 	var event Event
 	if err := db.QueryRow("SELECT * FROM events WHERE id = ?", eventID).Scan(&event.ID, &event.Title, &event.PublicFg, &event.ClosedFg, &event.Price); err != nil {
 		return nil, err
 	}
-	err = getEventInner(uid, rvs, &event)
+
+	err := getEventInner(uid, rvs, &event)
 	if err != nil {
 		return nil, err
 	}
@@ -428,6 +450,27 @@ func initialize(c echo.Context) error {
 	if err != nil {
 		return nil
 	}
+
+	{
+		// rvss[eventID][sheetID]
+		rows2, err := db.Query("SELECT * FROM reservations WHERE canceled_at = '0000-00-00 00:00:00'")
+		if err != nil {
+			return err
+		}
+		for rows2.Next() {
+			var rv Reservation
+			err := rows2.Scan(&rv.ID, &rv.EventID, &rv.SheetID, &rv.UserID, &rv.ReservedAt, &rv.CanceledAt, &rv.EventPrice)
+			if err != nil {
+				return err
+			}
+			if _, ok := gRvss[rv.EventID]; !ok {
+				gRvss[rv.EventID] = make(map[int64]Reservation)
+			}
+			gRvss[rv.EventID][rv.SheetID] = rv
+		}
+		rows2.Close()
+	}
+	gRvssLast = time.Now()
 
 	return c.NoContent(204)
 }
