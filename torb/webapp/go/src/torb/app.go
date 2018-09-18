@@ -257,12 +257,11 @@ func updateRvss() error {
 			if err != nil {
 				return err
 			}
-			if _, ok := gRvss[rv.EventID]; !ok {
-				gRvss[rv.EventID] = make(map[int64]Reservation)
-			}
-			gRvss[rv.EventID][rv.SheetID] = rv
-			if rv.CanceledAt.Unix() > 0 {
-				delete(gRvss[rv.EventID], rv.SheetID)
+			if rv.CanceledAt.Unix() <= 0 {
+				if _, ok := gRvss[rv.EventID]; !ok {
+					gRvss[rv.EventID] = make(map[int64]Reservation)
+				}
+				gRvss[rv.EventID][rv.SheetID] = rv
 			}
 		}
 		rows2.Close()
@@ -451,26 +450,11 @@ func initialize(c echo.Context) error {
 		return nil
 	}
 
-	{
-		// rvss[eventID][sheetID]
-		rows2, err := db.Query("SELECT * FROM reservations WHERE canceled_at = '0000-00-00 00:00:00'")
-		if err != nil {
-			return err
-		}
-		for rows2.Next() {
-			var rv Reservation
-			err := rows2.Scan(&rv.ID, &rv.EventID, &rv.SheetID, &rv.UserID, &rv.ReservedAt, &rv.CanceledAt, &rv.EventPrice)
-			if err != nil {
-				return err
-			}
-			if _, ok := gRvss[rv.EventID]; !ok {
-				gRvss[rv.EventID] = make(map[int64]Reservation)
-			}
-			gRvss[rv.EventID][rv.SheetID] = rv
-		}
-		rows2.Close()
+	gRvss = make(map[int64]map[int64]Reservation)
+	gRvssLast = time.Time{}
+	if err := updateRvss(); err != nil {
+		return err
 	}
-	gRvssLast = time.Now()
 
 	return c.NoContent(204)
 }
