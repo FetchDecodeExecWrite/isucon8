@@ -1134,7 +1134,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	db.SetMaxIdleConns(10)
+	db.SetMaxIdleConns(100)
 
 	e := echo.New()
 	funcs := template.FuncMap{
