@@ -515,7 +515,7 @@ func getUser(c echo.Context) error {
 		reservation.SheetNum = sheet.Num
 		reservation.Price = price
 		reservation.ReservedAtUnix = reservation.ReservedAt.Unix()
-		if reservation.CanceledAt != nil {
+		if reservation.CanceledAt.Unix() > 0 {
 			reservation.CanceledAtUnix = reservation.CanceledAt.Unix()
 		}
 		recentReservations = append(recentReservations, reservation)
@@ -941,7 +941,7 @@ func reportSales(c echo.Context) error {
 			SoldAt:        reservation.ReservedAt.Format("2006-01-02T15:04:05.000000Z"),
 			Price:         event.Price + sheet.Price,
 		}
-		if reservation.CanceledAt != nil {
+		if reservation.CanceledAt.Unix() > 0 {
 			report.CanceledAt = reservation.CanceledAt.Format("2006-01-02T15:04:05.000000Z")
 		}
 		reports = append(reports, report)
@@ -977,7 +977,7 @@ func reportSaleses(c echo.Context) error {
 			SoldAt:        reservation.ReservedAt.Format("2006-01-02T15:04:05.000000Z"),
 			Price:         reservation.EventPrice + sheet.Price,
 		}
-		if reservation.CanceledAt != nil {
+		if reservation.CanceledAt.Unix() > 0 {
 			report.CanceledAt = reservation.CanceledAt.Format("2006-01-02T15:04:05.000000Z")
 		}
 
