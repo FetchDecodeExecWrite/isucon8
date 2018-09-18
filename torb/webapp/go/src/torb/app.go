@@ -342,7 +342,6 @@ func getEvent(eventID, uid int64) (*Event, error) {
 
 	gRvssRWLock.RLock()
 	rvs, _ := gRvss[eventID]
-	gRvssRWLock.RUnlock()
 
 	var event Event
 	if err := db.QueryRow("SELECT * FROM events WHERE id = ?", eventID).Scan(&event.ID, &event.Title, &event.PublicFg, &event.ClosedFg, &event.Price); err != nil {
@@ -359,6 +358,7 @@ func getEvent(eventID, uid int64) (*Event, error) {
 		sheet := sheetIDtoSheet(j)
 		completeSheetAndEvent(&sheet, &event, rvs, uid, true)
 	}
+	gRvssRWLock.RUnlock()
 
 	return &event, nil
 }
