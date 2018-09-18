@@ -103,7 +103,7 @@ func sheetIDtoSheet(id int64) Sheet {
 	if id > 200 {
 		return Sheet{ID: id, Rank: "B", Num: 1, Price: 1000}
 	}
-	if id > 500 {
+	if id > 50 {
 		return Sheet{ID: id, Rank: "A", Num: 1, Price: 3000}
 	}
 	return Sheet{ID: id, Rank: "S", Num: 1, Price: 5000}
