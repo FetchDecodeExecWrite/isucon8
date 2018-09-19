@@ -532,7 +532,7 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 			"[[ .administrator ]]", strings.Replace(string(us), "\"", "&#34;", -1),
 			"[[ .origin ]]", string(os),
 		)
-		rep.WriteString(w, r.indexTmpl)
+		rep.WriteString(w, r.adminTmpl)
 	}
 	return nil
 }
