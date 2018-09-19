@@ -515,16 +515,24 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 		es, _ := json.Marshal(m["events"])
 		us, _ := json.Marshal(m["user"])
 		os, _ := m["origin"].(string)
-		e := strings.Replace(string(es), "\"", "&#34;", -1)
-		u := strings.Replace(string(us), "\"", "&#34;", -1)
-		w.Write([]byte(indexTmpl(e, u, os)))
+		e := []byte(strings.Replace(string(es), "\"", "&#34;", -1))
+		u := []byte(strings.Replace(string(us), "\"", "&#34;", -1))
+		o := []byte(os)
+		t := indexTmpl(e, u, o)
+		for i := range t {
+			w.Write(t[i])
+		}
 	case "admin.tmpl":
 		es, _ := json.Marshal(m["events"])
 		us, _ := json.Marshal(m["administrator"])
 		os, _ := m["origin"].(string)
-		e := strings.Replace(string(es), "\"", "&#34;", -1)
-		u := strings.Replace(string(us), "\"", "&#34;", -1)
-		w.Write([]byte(adminTmpl(e, u, os)))
+		e := []byte(strings.Replace(string(es), "\"", "&#34;", -1))
+		u := []byte(strings.Replace(string(us), "\"", "&#34;", -1))
+		o := []byte(os)
+		t := adminTmpl(e, u, o)
+		for i := range t {
+			w.Write(t[i])
+		}
 	}
 	return nil
 }
