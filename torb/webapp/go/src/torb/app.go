@@ -273,8 +273,12 @@ func updateRvss() error {
 }
 
 func updateRvssOnlyEvent(eid int64) error {
+	now := time.Now()
 	gRvssRWLock.Lock()
 	defer gRvssRWLock.Unlock()
+	if gRvssLast.After(now) {
+		return nil
+	}
 
 	{
 		rows2, err := db.Query("SELECT * FROM reservations WHERE event_id = ? AND (canceled_at >= ? OR reserved_at >= ?)", eid, gRvssLast.Add(-2*time.Second).UTC().Format("2006-01-02 15:04:05.000000"), gRvssLast.Add(-2*time.Second).UTC().Format("2006-01-02 15:04:05.000000"))
@@ -396,7 +400,12 @@ func getEvents(all bool) ([]*Event, error) {
 
 func getEvent(eventID, uid int64) (*Event, error) {
 	eg := errgroup.Group{}
-	eg.Go(updateRvss)
+	eg.Go(func() error {
+		if err := updateRvssOnlyEvent(eventID); err != nil {
+			return err
+		}
+		return nil
+	})
 
 	var event Event
 	eg.Go(func() error {
