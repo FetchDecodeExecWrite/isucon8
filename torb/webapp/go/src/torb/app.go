@@ -827,7 +827,8 @@ func deleteReserve(c echo.Context) error {
 		return resError(c, "not_found", 404)
 	}
 	rank := c.Param("rank")
-	num := c.Param("num")
+	n, _ := strconv.Atoi(c.Param("num"))
+	num := int64(n)
 
 	user, err := getLoginUser(c)
 	if err != nil {
@@ -852,7 +853,6 @@ func deleteReserve(c echo.Context) error {
 		Rank: rank,
 		Num:  num,
 	}
-	var sheet Sheet
 	switch rank {
 	case "S":
 		sheet.ID = num
