@@ -290,8 +290,8 @@ func updateRvssOnlyEvent(eid int64) error {
 		for rows2.Next() {
 			var rv Reservation
 			err := rows2.Scan(&rv.ID, &rv.EventID, &rv.SheetID, &rv.UserID, &rv.ReservedAt, &rv.CanceledAt, &rv.EventPrice)
-			gRvssRWLock.Unlock()
 			if err != nil {
+				gRvssRWLock.Unlock()
 				return err
 			}
 
