@@ -328,7 +328,7 @@ func getEvents(all bool) ([]*Event, error) {
 
 	var events []*Event
 	eg.Go(func() error {
-		rows, err := db.Query("SELECT * FROM events")
+		rows, err := db2.Query("SELECT * FROM events")
 		if err != nil {
 			return err
 		}
@@ -415,7 +415,7 @@ func getEvent(eventID, uid int64) (*Event, error) {
 
 	var event Event
 	eg.Go(func() error {
-		if err := db.QueryRow("SELECT * FROM events WHERE id = ?", eventID).Scan(&event.ID, &event.Title, &event.PublicFg, &event.ClosedFg, &event.Price); err != nil {
+		if err := db2.QueryRow("SELECT * FROM events WHERE id = ?", eventID).Scan(&event.ID, &event.Title, &event.PublicFg, &event.ClosedFg, &event.Price); err != nil {
 			return err
 		}
 		return nil
@@ -572,6 +572,16 @@ func index(c echo.Context) error {
 	})
 }
 
+func initialize3(c echo.Context) error {
+	cmd := exec.Command("../../db/init.sh")
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	err := cmd.Run()
+	if err != nil {
+		return nil
+	}
+}
+
 func initialize2(c echo.Context) error {
 	gRvss = make(map[int64]map[int64]Reservation)
 	gRvssLast = time.Time{}
@@ -591,6 +601,7 @@ func initialize(c echo.Context) error {
 		return nil
 	}
 
+	go exec.Command("curl", "http://172.16.21.1:8080/initialize3").Run()
 	exec.Command("curl", "http://172.16.21.1:8080/initialize2").Run()
 	exec.Command("curl", "http://172.16.21.2:8080/initialize2").Run()
 	exec.Command("curl", "http://172.16.21.3:8080/initialize2").Run()
@@ -835,7 +846,7 @@ func postReserve(c echo.Context) error {
 
 	var eventPrice int64
 	var publicFg bool
-	if err := db.QueryRow("SELECT price, public_fg FROM events WHERE id = ?", eventID).Scan(&eventPrice, &publicFg); err != nil {
+	if err := db2.QueryRow("SELECT price, public_fg FROM events WHERE id = ?", eventID).Scan(&eventPrice, &publicFg); err != nil {
 		if err == sql.ErrNoRows {
 			return resError(c, "invalid_event", 404)
 		}
@@ -924,7 +935,7 @@ func deleteReserve(c echo.Context) error {
 	}
 
 	var publicFg bool
-	if err := db.QueryRow("SELECT public_fg FROM events WHERE id = ?", eventID).Scan(&publicFg); err != nil {
+	if err := db2.QueryRow("SELECT public_fg FROM events WHERE id = ?", eventID).Scan(&publicFg); err != nil {
 		if err == sql.ErrNoRows {
 			return resError(c, "invalid_event", 404)
 		}
@@ -1073,22 +1084,12 @@ func postAdminEvents(c echo.Context) error {
 	}
 	c.Bind(&params)
 
-	tx, err := db.Begin()
+	res, err := db2.Exec("INSERT INTO events (id, title, public_fg, closed_fg, price) VALUES (RAND()*100000, ?, ?, 0, ?)", params.Title, params.Public, params.Price)
 	if err != nil {
-		return err
-	}
-
-	res, err := tx.Exec("INSERT INTO events (id, title, public_fg, closed_fg, price) VALUES (RAND()*100000, ?, ?, 0, ?)", params.Title, params.Public, params.Price)
-	if err != nil {
-		tx.Rollback()
 		return err
 	}
 	eventID, err := res.LastInsertId()
 	if err != nil {
-		tx.Rollback()
-		return err
-	}
-	if err := tx.Commit(); err != nil {
 		return err
 	}
 
@@ -1130,7 +1131,7 @@ func editAdminEvent(c echo.Context) error {
 	}
 
 	var event Event
-	if err := db.QueryRow("SELECT * FROM events WHERE id = ?", eventID).Scan(&event.ID, &event.Title, &event.PublicFg, &event.ClosedFg, &event.Price); err != nil {
+	if err := db2.QueryRow("SELECT * FROM events WHERE id = ?", eventID).Scan(&event.ID, &event.Title, &event.PublicFg, &event.ClosedFg, &event.Price); err != nil {
 		if err == sql.ErrNoRows {
 			return resError(c, "not_found", 404)
 		}
@@ -1143,7 +1144,7 @@ func editAdminEvent(c echo.Context) error {
 		return resError(c, "cannot_close_public_event", 400)
 	}
 
-	if _, err := db.Exec("UPDATE events SET public_fg = ?, closed_fg = ? WHERE id = ?", params.Public, params.Closed, event.ID); err != nil {
+	if _, err := db2.Exec("UPDATE events SET public_fg = ?, closed_fg = ? WHERE id = ?", params.Public, params.Closed, event.ID); err != nil {
 		return err
 	}
 
@@ -1242,12 +1243,24 @@ func main() {
 		os.Getenv("DB_DATABASE"),
 	)
 
+	dsn2 := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&charset=utf8mb4",
+		os.Getenv("DB_USER"), os.Getenv("DB_PASS"),
+		"172.16.21.1", os.Getenv("DB_PORT"),
+		os.Getenv("DB_DATABASE"),
+	)
+
 	var err error
 	db, err = sql.Open("mysql", dsn)
 	if err != nil {
 		log.Fatal(err)
 	}
 	db.SetMaxIdleConns(100)
+
+	db2, err = sql.Open("mysql", dsn2)
+	if err != nil {
+		log.Fatal(err)
+	}
+	db2.SetMaxIdleConns(100)
 
 	e := echo.New()
 	e.Renderer = &Renderer{}
@@ -1256,6 +1269,7 @@ func main() {
 	e.Static("/", "public")
 
 	e.GET("/", index, fillinUser)
+	e.GET("/initialize3", initialize3)
 	e.GET("/initialize2", initialize2)
 	e.GET("/initialize", initialize)
 	e.POST("/api/users", users)
