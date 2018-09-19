@@ -815,9 +815,10 @@ func postReserve(c echo.Context) error {
 	}
 	c.Bind(&params)
 
-	user, err := getLoginUser(c)
-	if err != nil {
-		return err
+	var user User
+	user.ID = sessUserID(c)
+	if user.ID == 0 {
+		return errors.New("not logged in")
 	}
 
 	var eventPrice int64
@@ -904,9 +905,10 @@ func deleteReserve(c echo.Context) error {
 	n, _ := strconv.Atoi(c.Param("num"))
 	num := int64(n)
 
-	user, err := getLoginUser(c)
-	if err != nil {
-		return err
+	var user User
+	user.ID = sessUserID(c)
+	if user.ID == 0 {
+		return errors.New("not logged in")
 	}
 
 	var publicFg bool
