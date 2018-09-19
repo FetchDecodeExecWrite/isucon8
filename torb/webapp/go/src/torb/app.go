@@ -277,25 +277,32 @@ func updateRvss() error {
 }
 
 func getEvents(all bool) ([]*Event, error) {
-	rows, err := db.Query("SELECT * FROM events")
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+	eg := errgroup.Group{}
 
 	var events []*Event
-	for rows.Next() {
-		var event Event
-		if err := rows.Scan(&event.ID, &event.Title, &event.PublicFg, &event.ClosedFg, &event.Price); err != nil {
-			return nil, err
+	eg.Go(func() error {
+		rows, err := db.Query("SELECT * FROM events")
+		if err != nil {
+			return err
 		}
-		if !all && !event.PublicFg {
-			continue
-		}
-		events = append(events, &event)
-	}
+		defer rows.Close()
 
-	if err := updateRvss(); err != nil {
+		for rows.Next() {
+			var event Event
+			if err := rows.Scan(&event.ID, &event.Title, &event.PublicFg, &event.ClosedFg, &event.Price); err != nil {
+				return err
+			}
+			if !all && !event.PublicFg {
+				continue
+			}
+			events = append(events, &event)
+		}
+		return nil
+	})
+
+	eg.Go(updateRvss)
+
+	if err := eg.Wait(); err != nil {
 		return nil, err
 	}
 
