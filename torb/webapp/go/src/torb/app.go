@@ -530,7 +530,7 @@ func index(c echo.Context) error {
 		if cachedTime.After(now) {
 			return nil
 		}
-		cachedTime = time.Now().Add(time.Second / 2)
+		cachedTime = time.Now()
 		cachedEvents, err = getEvents(false)
 		for i, v := range cachedEvents {
 			cachedEvents[i] = sanitizeEvent(v)
