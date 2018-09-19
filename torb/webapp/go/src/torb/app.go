@@ -835,13 +835,13 @@ func deleteReserve(c echo.Context) error {
 		return err
 	}
 
-	event, err := getEvent(eventID, user.ID)
-	if err != nil {
+	if err := db.QueryRow("SELECT public_fg FROM events WHERE id = ?", eventID).Scan(&event.PublicFg); err != nil {
 		if err == sql.ErrNoRows {
 			return resError(c, "invalid_event", 404)
 		}
 		return err
-	} else if !event.PublicFg {
+	}
+	if !event.PublicFg {
 		return resError(c, "invalid_event", 404)
 	}
 
