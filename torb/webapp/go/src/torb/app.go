@@ -276,6 +276,53 @@ func updateRvss() error {
 	return nil
 }
 
+func updateRvssOnlyEvent(eid int64) error {
+	gRvssRWLock.Lock()
+	defer gRvssRWLock.Unlock()
+
+	{
+		// rvss[eventID][sheetID]
+		rows2, err := db.Query("SELECT * FROM reservations WHERE event_id = ? AND canceled_at >= ?", eid, gRvssLast.Add(-time.Second/5).UTC().Format("2006-01-02 15:04:05.000000"))
+		if err != nil {
+			return err
+		}
+		defer rows2.Close()
+		for rows2.Next() {
+			var rv Reservation
+			err := rows2.Scan(&rv.ID, &rv.EventID, &rv.SheetID, &rv.UserID, &rv.ReservedAt, &rv.CanceledAt, &rv.EventPrice)
+			if err != nil {
+				return err
+			}
+			if _, ok := gRvss[rv.EventID]; !ok {
+				continue
+			}
+			delete(gRvss[rv.EventID], rv.SheetID)
+		}
+	}
+	{
+		// rvss[eventID][sheetID]
+		rows2, err := db.Query("SELECT * FROM reservations WHERE event_id = ? AND reserved_at >= ?", eid, gRvssLast.Add(-time.Second/5).UTC().Format("2006-01-02 15:04:05.000000"))
+		if err != nil {
+			return err
+		}
+		defer rows2.Close()
+		for rows2.Next() {
+			var rv Reservation
+			err := rows2.Scan(&rv.ID, &rv.EventID, &rv.SheetID, &rv.UserID, &rv.ReservedAt, &rv.CanceledAt, &rv.EventPrice)
+			if err != nil {
+				return err
+			}
+			if rv.CanceledAt.Unix() <= 0 {
+				if _, ok := gRvss[rv.EventID]; !ok {
+					gRvss[rv.EventID] = make(map[int64]Reservation)
+				}
+				gRvss[rv.EventID][rv.SheetID] = rv
+			}
+		}
+	}
+	return nil
+}
+
 func getEvents(all bool) ([]*Event, error) {
 	eg := errgroup.Group{}
 
@@ -360,7 +407,7 @@ func getEvents(all bool) ([]*Event, error) {
 func getEvent(eventID, uid int64) (*Event, error) {
 	eg := errgroup.Group{}
 	eg.Go(func() error {
-		if err := updateRvss(); err != nil {
+		if err := updateRvssOnlyEvent(eventID); err != nil {
 			return err
 		}
 		return nil
