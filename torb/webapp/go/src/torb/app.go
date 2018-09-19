@@ -837,11 +837,13 @@ func postReserve(c echo.Context) error {
 			return err
 		}
 
-		id := ""
-		if err := tx.QueryRow("SELECT id FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at = '0000-00-00 00:00:00' FOR UPDATE", eventID, sheet.ID).Scan(&id); err != sql.ErrNoRows {
-			tx.Rollback()
-			continue
-		}
+		/*
+			id := ""
+			if err := tx.QueryRow("SELECT id FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at = '0000-00-00 00:00:00' FOR UPDATE", eventID, sheet.ID).Scan(&id); err != sql.ErrNoRows {
+				tx.Rollback()
+				continue
+			}
+		*/
 
 		res, err := tx.Exec("INSERT INTO reservations (event_id, sheet_id, user_id, reserved_at, event_price) VALUES (?, ?, ?, ?, ?)", eventID, sheet.ID, user.ID, time.Now().UTC().Format("2006-01-02 15:04:05.000000"), eventPrice)
 		if err != nil {
