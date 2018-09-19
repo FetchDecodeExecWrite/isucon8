@@ -955,14 +955,22 @@ func deleteReserve(c echo.Context) error {
 	}
 
 	for i := 0; i < 20; i++ {
-		if res, err := db.Exec(
+		res, err := db.Exec(
 			"UPDATE reservations SET canceled_at = ? WHERE event_id = ? AND sheet_id = ? AND canceled_at = '0000-00-00 00:00:00' AND user_id = ?",
 			time.Now().UTC().Format("2006-01-02 15:04:05.000000"), eventID, sheet.ID, user.ID,
-		); err != nil || res.RowsAffected() == 0 {
-			if err != nil {
-				log.Println(err)
-				continue
-			}
+		)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		n, err := res.RowsAffected()
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		if n == 0 {
 			var a int64
 			if err := db.QueryRow(
 				"SELECT 1 FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at = '0000-00-00 00:00:00'",
