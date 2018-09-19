@@ -16,7 +16,6 @@ fi
 
 gzip -dc "$DB_DIR/isucon8q-initial-dataset.sql.gz" | mysql -uisucon torb
 
-mysql -uroot torb -e "set global max_connections = 10000"&
 mysql -uisucon torb -e "ALTER TABLE sheets ADD UNIQUE rank_num_uniq (\`rank\`, num)"&
 mysql -uisucon torb -e "ALTER TABLE reservations ADD INDEX reserve (reserved_at)"&
 mysql -uisucon torb -e "ALTER TABLE reservations ADD INDEX canceled (canceled_at)"&
@@ -27,3 +26,5 @@ mysql -uisucon torb -e "ALTER TABLE reservations ADD UNIQUE uniq3 (event_id, she
 
 mysql -uisucon torb -e 'update reservations set canceled_at = 0 where canceled_at IS NULL'
 mysql -uisucon torb -e 'update reservations set event_price = (select price from events where id = reservations.event_id)'
+
+mysql -uisucon -e "set global max_connections = 10000"
