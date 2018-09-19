@@ -537,7 +537,7 @@ func index(c echo.Context) error {
 		cachedTime = time.Now()
 		return err
 	}
-	if time.Now().Sub(cachedTime) < time.Second/2 {
+	if time.Now().Sub(cachedTime) < time.Second/5 {
 		go f()
 	} else {
 		if err := f(); err != nil {
