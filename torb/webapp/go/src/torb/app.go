@@ -527,8 +527,10 @@ func index(c echo.Context) error {
 		now := time.Now()
 		cachedEventsLock.Lock()
 		defer cachedEventsLock.Unlock()
-
-		cachedTime = now.Add(time.Second / 2)
+		if cachedTime.After(now) {
+			return nil
+		}
+		cachedTime = time.Now().Add(time.Second / 2)
 		cachedEvents, err = getEvents(false)
 		for i, v := range cachedEvents {
 			cachedEvents[i] = sanitizeEvent(v)
