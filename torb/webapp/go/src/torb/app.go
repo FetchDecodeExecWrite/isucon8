@@ -317,7 +317,7 @@ func updateRvssOnlyEvent(eid int64) error {
 		}
 	}
 	gRvssRWLock.Unlock()
-	updateRvss()
+	go updateRvss()
 	return nil
 }
 
