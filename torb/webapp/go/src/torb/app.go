@@ -282,7 +282,7 @@ func updateRvssOnlyEvent(eid int64) error {
 
 	{
 		// rvss[eventID][sheetID]
-		rows2, err := db.Query("SELECT * FROM reservations WHERE event_id = ? AND canceled_at >= ?", eid, gRvssLast.Add(-5*time.Second).UTC().Format("2006-01-02 15:04:05.000000"))
+		rows2, err := db.Query("SELECT * FROM reservations WHERE event_id = ? AND canceled_at >= ?", eid, gRvssLast.Add(-2*time.Second).UTC().Format("2006-01-02 15:04:05.000000"))
 		if err != nil {
 			return err
 		}
@@ -301,7 +301,7 @@ func updateRvssOnlyEvent(eid int64) error {
 	}
 	{
 		// rvss[eventID][sheetID]
-		rows2, err := db.Query("SELECT * FROM reservations WHERE event_id = ? AND reserved_at >= ?", eid, gRvssLast.Add(-5*time.Second).UTC().Format("2006-01-02 15:04:05.000000"))
+		rows2, err := db.Query("SELECT * FROM reservations WHERE event_id = ? AND reserved_at >= ?", eid, gRvssLast.Add(-2*time.Second).UTC().Format("2006-01-02 15:04:05.000000"))
 		if err != nil {
 			return err
 		}
