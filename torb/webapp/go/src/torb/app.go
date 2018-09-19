@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"html/template"
 	"io"
 	"log"
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/errgroup"
 	"time"
@@ -506,11 +506,35 @@ func validateRank(rank string) bool {
 }
 
 type Renderer struct {
-	templates *template.Template
+	indexTmpl string
+	adminTmpl string
 }
 
 func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
-	return r.templates.ExecuteTemplate(w, name, data)
+	m := data.(echo.Map)
+	switch name {
+	case "index.tmpl":
+		es, _ := json.Marshal(m["events"])
+		us, _ := json.Marshal(m["user"])
+		os, _ := m["origin"].(string)
+		rep := strings.NewReplacer(
+			"[[ .events ]]", strings.Replace(string(es), "\"", "&#34;", -1),
+			"[[ .user ]]", strings.Replace(string(us), "\"", "&#34;", -1),
+			"[[ .origin ]]", string(os),
+		)
+		rep.WriteString(w, r.indexTmpl)
+	case "admin.tmpl":
+		es, _ := json.Marshal(m["events"])
+		us, _ := json.Marshal(m["administrator"])
+		os, _ := m["origin"].(string)
+		rep := strings.NewReplacer(
+			"[[ .events ]]", strings.Replace(string(es), "\"", "&#34;", -1),
+			"[[ .administrator ]]", strings.Replace(string(us), "\"", "&#34;", -1),
+			"[[ .origin ]]", string(os),
+		)
+		rep.WriteString(w, r.indexTmpl)
+	}
+	return nil
 }
 
 var db *sql.DB
@@ -1232,14 +1256,9 @@ func main() {
 	db.SetMaxIdleConns(100)
 
 	e := echo.New()
-	funcs := template.FuncMap{
-		"encode_json": func(v interface{}) string {
-			b, _ := json.Marshal(v)
-			return string(b)
-		},
-	}
 	e.Renderer = &Renderer{
-		templates: template.Must(template.New("").Delims("[[", "]]").Funcs(funcs).ParseGlob("views/*.tmpl")),
+		indexTmpl: indexTmpl,
+		adminTmpl: adminTmpl,
 	}
 	e.Use(session.Middleware(sessions.NewCookieStore([]byte("secret"))))
 	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{Output: os.Stderr}))
