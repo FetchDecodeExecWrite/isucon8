@@ -788,9 +788,9 @@ func getEventReq(c echo.Context) error {
 		return resError(c, "not_found", 404)
 	}
 
-	loginUserID := int64(-1)
-	if user, err := getLoginUser(c); err == nil {
-		loginUserID = user.ID
+	loginUserID := sessUserID(c)
+	if loginUserID == 0 {
+		loginUserID = -1
 	}
 
 	event, err := getEvent(eventID, loginUserID)
