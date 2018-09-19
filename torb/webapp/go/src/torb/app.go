@@ -537,7 +537,7 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 	return nil
 }
 
-var db *sql.DB
+var db, db2 *sql.DB
 
 var (
 	cachedEvents     []*Event
@@ -577,9 +577,7 @@ func initialize3(c echo.Context) error {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	err := cmd.Run()
-	if err != nil {
-		return nil
-	}
+	return err
 }
 
 func initialize2(c echo.Context) error {
