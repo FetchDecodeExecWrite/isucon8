@@ -314,6 +314,7 @@ func updateRvssOnlyEvent(eid int64) error {
 
 		}
 	}
+	go updateRvss()
 	return nil
 }
 
