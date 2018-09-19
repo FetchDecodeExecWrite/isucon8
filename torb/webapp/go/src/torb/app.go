@@ -865,6 +865,9 @@ func deleteReserve(c echo.Context) error {
 	default:
 		return resError(c, "invalid_sheet", 404)
 	}
+	if sheetIDtoSheet(sheet.ID).Rank != rank || num < 1 || num > 1000 {
+		return resError(c, "invalid_sheet", 404)
+	}
 
 	for i := 0; i < 20; i++ {
 		tx, err := db.Begin()
