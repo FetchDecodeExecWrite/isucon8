@@ -1279,9 +1279,10 @@ func main() {
 	go (func() {
 		for {
 			updateRvss()
-			time.Sleep(time.Second / 10)
+			time.Sleep(time.Second / 30)
 		}
 	})()
+
 	if os.Getenv("DEBUG_ISUCON") == "" {
 		echopprof.Wrap(e)
 	} else {
@@ -1302,8 +1303,6 @@ type Report struct {
 }
 
 func renderReportCSV(c echo.Context, reports []Report) error {
-	//sort.Slice(reports, func(i, j int) bool { return strings.Compare(reports[i].SoldAt, reports[j].SoldAt) < 0 })
-
 	c.Response().Header().Set("Content-Type", `text/csv; charset=UTF-8`)
 	c.Response().Header().Set("Content-Disposition", `attachment; filename="report.csv"`)
 
@@ -1313,8 +1312,6 @@ func renderReportCSV(c echo.Context, reports []Report) error {
 		body.Write([]byte(fmt.Sprintf("%d,%d,%s,%d,%d,%d,%s,%s\n",
 			v.ReservationID, v.EventID, v.Rank, v.Num, v.Price, v.UserID, v.SoldAt, v.CanceledAt)))
 	}
-
-	//_, err := io.Copy(c.Response(), body)
 	return nil
 }
 
