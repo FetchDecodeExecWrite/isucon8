@@ -1052,6 +1052,8 @@ func adminLogin(c echo.Context) error {
 	}
 
 	sessSetAdministratorID(c, administrator.ID)
+	administrator.LoginName = ""
+	administrator.PassHash = ""
 	return c.JSON(200, administrator)
 }
 
