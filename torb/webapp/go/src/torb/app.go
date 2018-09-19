@@ -1279,7 +1279,7 @@ func main() {
 	go (func() {
 		for {
 			updateRvss()
-			time.Sleep(time.Second / 30)
+			time.Sleep(time.Second / 10)
 		}
 	})()
 
