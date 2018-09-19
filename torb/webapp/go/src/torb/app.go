@@ -955,36 +955,25 @@ func deleteReserve(c echo.Context) error {
 	}
 
 	for i := 0; i < 20; i++ {
-		tx, err := db.Begin()
-		if err != nil {
-			return err
-		}
-
-		var reservation Reservation
-		if err := tx.QueryRow("SELECT * FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at = '0000-00-00 00:00:00' FOR UPDATE", eventID, sheet.ID).Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &reservation.EventPrice); err != nil {
-			tx.Rollback()
+		if _, err := db.Exec(
+			"UPDATE reservations SET canceled_at = ? WHERE event_id = ? AND sheet_id = ? AND canceled_at = '0000-00-00 00:00:00' AND user_id = ?",
+			time.Now().UTC().Format("2006-01-02 15:04:05.000000"), eventID, sheet.ID, user.ID,
+		); err != nil {
 			if err == sql.ErrNoRows {
-				return resError(c, "not_reserved", 400)
+				if _, err := db.Exec(
+					"SELECT 1 FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at = '0000-00-00 00:00:00'",
+					eventID, sheet.ID,
+				); err != nil {
+					if err == sql.ErrNoRows {
+						return resError(c, "not_reserved", 400)
+					}
+					return resError(c, "not_permitted", 403)
+				}
 			}
-			continue
-		}
-		if reservation.UserID != user.ID {
-			tx.Rollback()
-			// cheat
-			if err := db.QueryRow("SELECT id FROM reservations WHERE event_id = ? AND sheet_id = ? AND user_id = ?", eventID, sheet.ID, user.ID); err != nil {
-				return resError(c, "not_permitted", 403)
-			}
-			return resError(c, "not_reserved", 400)
-		}
-
-		if _, err := tx.Exec("UPDATE reservations SET canceled_at = ? WHERE id = ?", time.Now().UTC().Format("2006-01-02 15:04:05.000000"), reservation.ID); err != nil {
-			tx.Rollback()
+			log.Println(err)
 			continue
 		}
 
-		if err := tx.Commit(); err != nil {
-			return err
-		}
 		return c.NoContent(204)
 	}
 
