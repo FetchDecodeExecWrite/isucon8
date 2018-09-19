@@ -960,10 +960,11 @@ func deleteReserve(c echo.Context) error {
 			time.Now().UTC().Format("2006-01-02 15:04:05.000000"), eventID, sheet.ID, user.ID,
 		); err != nil {
 			if err == sql.ErrNoRows {
-				if _, err := db.Exec(
+				var a int64
+				if err := db.QueryRow(
 					"SELECT 1 FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at = '0000-00-00 00:00:00'",
 					eventID, sheet.ID,
-				); err != nil {
+				).Scan(&a); err != nil {
 					if err == sql.ErrNoRows {
 						return resError(c, "not_reserved", 400)
 					}
