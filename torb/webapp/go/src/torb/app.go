@@ -518,7 +518,7 @@ var db *sql.DB
 var (
 	cachedEvents     []*Event
 	cachedTime       time.Time
-	cachedEventsLock sync.Mutex
+	cachedEventsLock sync.RWMutex
 )
 
 func index(c echo.Context) error {
@@ -530,16 +530,24 @@ func index(c echo.Context) error {
 		if cachedTime.After(now) {
 			return nil
 		}
-		cachedTime = time.Now()
 		cachedEvents, err = getEvents(false)
 		for i, v := range cachedEvents {
 			cachedEvents[i] = sanitizeEvent(v)
 		}
+		cachedTime = time.Now()
 		return err
 	}
-	if err := f(); err != nil {
-		return err
+	if time.Now().Sub(cachedTime) < time.Second/2 {
+		go f()
+	} else {
+		if err := f(); err != nil {
+			return err
+		}
 	}
+
+	cachedEventsLock.RLock()
+	defer cachedEventsLock.RUnlock()
+
 	return c.Render(200, "index.tmpl", echo.Map{
 		"events": cachedEvents,
 		"user":   c.Get("user"),
@@ -947,7 +955,7 @@ func deleteReserve(c echo.Context) error {
 		if reservation.UserID != user.ID {
 			tx.Rollback()
 			// cheat
-			if err := db.QueryRow("SELECT id FROM reservations WHERE event_id = ? AND sheet_id = ? AND user_id = ?", eventID, sheet.ID, user.ID); err != nil {
+			if err := db.QueryRow("SELECT 1 FROM reservations WHERE event_id = ? AND sheet_id = ? AND user_id = ? LIMIT 1", eventID, sheet.ID, user.ID); err != nil {
 				return resError(c, "not_permitted", 403)
 			}
 			return resError(c, "not_reserved", 400)
