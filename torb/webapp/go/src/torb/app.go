@@ -835,13 +835,14 @@ func deleteReserve(c echo.Context) error {
 		return err
 	}
 
-	if err := db.QueryRow("SELECT public_fg FROM events WHERE id = ?", eventID).Scan(&event.PublicFg); err != nil {
+	var publicFg bool
+	if err := db.QueryRow("SELECT public_fg FROM events WHERE id = ?", eventID).Scan(&publicFg); err != nil {
 		if err == sql.ErrNoRows {
 			return resError(c, "invalid_event", 404)
 		}
 		return err
 	}
-	if !event.PublicFg {
+	if !publicFg {
 		return resError(c, "invalid_event", 404)
 	}
 
@@ -876,7 +877,7 @@ func deleteReserve(c echo.Context) error {
 		}
 
 		var reservation Reservation
-		if err := tx.QueryRow("SELECT * FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at = '0000-00-00 00:00:00' FOR UPDATE", event.ID, sheet.ID).Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &reservation.EventPrice); err != nil {
+		if err := tx.QueryRow("SELECT * FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at = '0000-00-00 00:00:00' FOR UPDATE", eventID, sheet.ID).Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &reservation.EventPrice); err != nil {
 			tx.Rollback()
 			if err == sql.ErrNoRows {
 				return resError(c, "not_reserved", 400)
@@ -886,7 +887,7 @@ func deleteReserve(c echo.Context) error {
 		if reservation.UserID != user.ID {
 			tx.Rollback()
 			// cheat
-			if err := db.QueryRow("SELECT id FROM reservations WHERE event_id = ? AND sheet_id = ? AND user_id = ?", event.ID, sheet.ID, user.ID); err != nil {
+			if err := db.QueryRow("SELECT id FROM reservations WHERE event_id = ? AND sheet_id = ? AND user_id = ?", eventID, sheet.ID, user.ID); err != nil {
 				return resError(c, "not_permitted", 403)
 			}
 			return resError(c, "not_reserved", 400)
