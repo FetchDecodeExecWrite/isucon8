@@ -771,13 +771,14 @@ func postReserve(c echo.Context) error {
 		return err
 	}
 
-	event, err := getEvent(eventID, user.ID)
-	if err != nil {
+	var publicFg bool
+	if err := db.QueryRow("SELECT public_fg FROM events WHERE id = ?", eventID).Scan(&publicFg); err != nil {
 		if err == sql.ErrNoRows {
 			return resError(c, "invalid_event", 404)
 		}
 		return err
-	} else if !event.PublicFg {
+	}
+	if !publicFg {
 		return resError(c, "invalid_event", 404)
 	}
 
