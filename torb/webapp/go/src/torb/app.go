@@ -506,8 +506,6 @@ func validateRank(rank string) bool {
 }
 
 type Renderer struct {
-	indexTmpl string
-	adminTmpl string
 }
 
 func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
@@ -517,22 +515,16 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 		es, _ := json.Marshal(m["events"])
 		us, _ := json.Marshal(m["user"])
 		os, _ := m["origin"].(string)
-		rep := strings.NewReplacer(
-			"[[ .events ]]", strings.Replace(string(es), "\"", "&#34;", -1),
-			"[[ .user ]]", strings.Replace(string(us), "\"", "&#34;", -1),
-			"[[ .origin ]]", string(os),
-		)
-		rep.WriteString(w, r.indexTmpl)
+		e := strings.Replace(string(es), "\"", "&#34;", -1)
+		u := strings.Replace(string(us), "\"", "&#34;", -1)
+		w.Write([]byte(indexTmpl(e, u, os)))
 	case "admin.tmpl":
 		es, _ := json.Marshal(m["events"])
 		us, _ := json.Marshal(m["administrator"])
 		os, _ := m["origin"].(string)
-		rep := strings.NewReplacer(
-			"[[ .events ]]", strings.Replace(string(es), "\"", "&#34;", -1),
-			"[[ .administrator ]]", strings.Replace(string(us), "\"", "&#34;", -1),
-			"[[ .origin ]]", string(os),
-		)
-		rep.WriteString(w, r.adminTmpl)
+		e := strings.Replace(string(es), "\"", "&#34;", -1)
+		u := strings.Replace(string(us), "\"", "&#34;", -1)
+		w.Write([]byte(adminTmpl(e, u, os)))
 	}
 	return nil
 }
@@ -1256,10 +1248,7 @@ func main() {
 	db.SetMaxIdleConns(100)
 
 	e := echo.New()
-	e.Renderer = &Renderer{
-		indexTmpl: indexTmpl,
-		adminTmpl: adminTmpl,
-	}
+	e.Renderer = &Renderer{}
 	e.Use(session.Middleware(sessions.NewCookieStore([]byte("secret"))))
 	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{Output: os.Stderr}))
 	e.Static("/", "public")

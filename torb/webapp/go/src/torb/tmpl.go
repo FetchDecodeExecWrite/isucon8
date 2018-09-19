@@ -1,7 +1,7 @@
 package main
 
-var (
-	indexTmpl = `<!DOCTYPE html>
+func indexTmpl(e, u, o string) string {
+	return `<!DOCTYPE html>
 <html lang="ja">
   <head>
     <meta charset="utf-8">
@@ -9,13 +9,13 @@ var (
 
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-    <link rel="shortcut icon" href="[[ .origin ]]/favicon.ico" type="image/vnd.microsoft.icon" />
-    <link rel="stylesheet" href="[[ .origin ]]/css/bootstrap.min.css">
-    <link rel="stylesheet" href="[[ .origin ]]/css/layout.css">
+    <link rel="shortcut icon" href="` + o + `/favicon.ico" type="image/vnd.microsoft.icon" />
+    <link rel="stylesheet" href="` + o + `/css/bootstrap.min.css">
+    <link rel="stylesheet" href="` + o + `/css/layout.css">
   </head>
   <body>
     <div id="container" class="container">
-      <div id="app-wrapper" data-login-user="[[ .user ]]" data-events="[[ .events ]]">
+      <div id="app-wrapper" data-login-user="` + u + `" data-events="` + e + `">
 
         <div id="menu-bar" class="d-flex flex-column flex-md-row align-items-center p-3 px-md-4 mb-3 bg-white border-bottom box-shadow">
           <h1 class="my-0 mr-md-auto font-weight-normal h5">Torb</h1>
@@ -233,16 +233,18 @@ var (
 
     <!-- Optional JavaScript -->
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->
-    <script type="text/javascript" src="[[ .origin ]]/js/jquery-3.3.1.slim.min.js"></script>
-    <script type="text/javascript" src="[[ .origin ]]/js/bootstrap.bundle.min.js"></script>
-    <script type="text/javascript" src="[[ .origin ]]/js/bootstrap-waitingfor.min.js"></script>
-    <script type="text/javascript" src="[[ .origin ]]/js/vue.min.js"></script>
-    <script type="text/javascript" src="[[ .origin ]]/js/fetch.min.js"></script>
-    <script type="text/javascript" src="[[ .origin ]]/js/app.js"></script>
+    <script type="text/javascript" src="` + o + `/js/jquery-3.3.1.slim.min.js"></script>
+    <script type="text/javascript" src="` + o + `/js/bootstrap.bundle.min.js"></script>
+    <script type="text/javascript" src="` + o + `/js/bootstrap-waitingfor.min.js"></script>
+    <script type="text/javascript" src="` + o + `/js/vue.min.js"></script>
+    <script type="text/javascript" src="` + o + `/js/fetch.min.js"></script>
+    <script type="text/javascript" src="` + o + `/js/app.js"></script>
   </body>
 </html>`
+}
 
-	adminTmpl = `<!DOCTYPE html>
+func adminTmpl(e, u, o string) string {
+	return `<!DOCTYPE html>
 <html lang="ja">
   <head>
     <meta charset="utf-8">
@@ -250,14 +252,14 @@ var (
 
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-    <link rel="shortcut icon" href="[[ .origin ]]/favicon.ico" type="image/vnd.microsoft.icon" />
-    <link rel="stylesheet" href="[[ .origin ]]/css/bootstrap.min.css">
-    <link rel="stylesheet" href="[[ .origin ]]/css/admin.css">
+    <link rel="shortcut icon" href="` + o + `/favicon.ico" type="image/vnd.microsoft.icon" />
+    <link rel="stylesheet" href="` + o + `/css/bootstrap.min.css">
+    <link rel="stylesheet" href="` + o + `/css/admin.css">
   </head>
   <body>
     <div id="container" class="container">
 
-      <div id="app-wrapper" data-administrator="[[ .administrator ]]" data-events="[[ .events ]]">
+      <div id="app-wrapper" data-administrator="` + u + `" data-events="` + e + `">
 
         <nav id="menu-bar" class="navbar navbar-expand-lg navbar-light bg-light">
           <h1 class="navbar-brand h5">Torb管理</h1>
@@ -438,12 +440,12 @@ var (
 
     <!-- Optional JavaScript -->
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->
-    <script type="text/javascript" src="[[ .origin ]]/js/jquery-3.3.1.slim.min.js"></script>
-    <script type="text/javascript" src="[[ .origin ]]/js/bootstrap.bundle.min.js"></script>
-    <script type="text/javascript" src="[[ .origin ]]/js/bootstrap-waitingfor.min.js"></script>
-    <script type="text/javascript" src="[[ .origin ]]/js/vue.min.js"></script>
-    <script type="text/javascript" src="[[ .origin ]]/js/fetch.min.js"></script>
-    <script type="text/javascript" src="[[ .origin ]]/js/admin.js"></script>
+    <script type="text/javascript" src="` + o + `/js/jquery-3.3.1.slim.min.js"></script>
+    <script type="text/javascript" src="` + o + `/js/bootstrap.bundle.min.js"></script>
+    <script type="text/javascript" src="` + o + `/js/bootstrap-waitingfor.min.js"></script>
+    <script type="text/javascript" src="` + o + `/js/vue.min.js"></script>
+    <script type="text/javascript" src="` + o + `/js/fetch.min.js"></script>
+    <script type="text/javascript" src="` + o + `/js/admin.js"></script>
   </body>
 </html>`
-)
+}
