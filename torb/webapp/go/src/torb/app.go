@@ -424,37 +424,6 @@ func getEvent(eventID, uid int64) (*Event, error) {
 	return &event, nil
 }
 
-func getEventInner(uid int64, rvs Rvs, event *Event) error {
-	event.Sheets = map[string]*Sheets{
-		"S": &Sheets{},
-		"A": &Sheets{},
-		"B": &Sheets{},
-		"C": &Sheets{},
-	}
-
-	return nil
-}
-
-func completeSheetAndEvent(sheet *Sheet, event *Event, rvs Rvs, uid int64, detail bool) {
-	event.Sheets[sheet.Rank].Price = event.Price + sheet.Price
-	event.Total++
-	event.Sheets[sheet.Rank].Total++
-
-	reservation, ok := rvs[sheet.ID]
-	if ok {
-		sheet.Mine = reservation.UserID == uid
-		sheet.Reserved = true
-		sheet.ReservedAtUnix = reservation.ReservedAt.Unix()
-	} else {
-		event.Remains++
-		event.Sheets[sheet.Rank].Remains++
-	}
-
-	if detail {
-		event.Sheets[sheet.Rank].Detail = append(event.Sheets[sheet.Rank].Detail, sheet)
-	}
-}
-
 func sanitizeEvent(e *Event) *Event {
 	sanitized := *e
 	sanitized.Price = 0
@@ -482,9 +451,11 @@ func fillinAdministrator(next echo.HandlerFunc) echo.HandlerFunc {
 }
 
 func validateRank(rank string) bool {
-	var count int
-	db.QueryRow("SELECT COUNT(*) FROM sheets WHERE `rank` = ?", rank).Scan(&count)
-	return count > 0
+	switch rank {
+	case "A", "B", "C", "S":
+		return true
+	}
+	return false
 }
 
 type Renderer struct {
