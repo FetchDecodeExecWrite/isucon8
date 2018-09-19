@@ -795,7 +795,6 @@ func postReserve(c echo.Context) error {
 
 		id := ""
 		if err := tx.QueryRow("SELECT id FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at = '0000-00-00 00:00:00' FOR UPDATE", event.ID, sheet.ID).Scan(&id); err != sql.ErrNoRows {
-			log.Println(err)
 			tx.Rollback()
 			continue
 		}
@@ -849,12 +848,22 @@ func deleteReserve(c echo.Context) error {
 		return resError(c, "invalid_rank", 404)
 	}
 
+	sheet := Sheet{
+		Rank: rank,
+		Num:  num,
+	}
 	var sheet Sheet
-	if err := db.QueryRow("SELECT * FROM sheets WHERE `rank` = ? AND num = ?", rank, num).Scan(&sheet.ID, &sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
-		if err == sql.ErrNoRows {
-			return resError(c, "invalid_sheet", 404)
-		}
-		return err
+	switch rank {
+	case "S":
+		sheet.ID = num
+	case "A":
+		sheet.ID = num - 50
+	case "B":
+		sheet.ID = num - 200
+	case "C":
+		sheet.ID = num - 500
+	default:
+		return resError(c, "invalid_sheet", 404)
 	}
 
 	for i := 0; i < 20; i++ {
