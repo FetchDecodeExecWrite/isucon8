@@ -955,24 +955,24 @@ func deleteReserve(c echo.Context) error {
 	}
 
 	for i := 0; i < 20; i++ {
-		if _, err := db.Exec(
+		if res, err := db.Exec(
 			"UPDATE reservations SET canceled_at = ? WHERE event_id = ? AND sheet_id = ? AND canceled_at = '0000-00-00 00:00:00' AND user_id = ?",
 			time.Now().UTC().Format("2006-01-02 15:04:05.000000"), eventID, sheet.ID, user.ID,
-		); err != nil {
-			if err == sql.ErrNoRows {
-				var a int64
-				if err := db.QueryRow(
-					"SELECT 1 FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at = '0000-00-00 00:00:00'",
-					eventID, sheet.ID,
-				).Scan(&a); err != nil {
-					if err == sql.ErrNoRows {
-						return resError(c, "not_reserved", 400)
-					}
-					return resError(c, "not_permitted", 403)
-				}
+		); err != nil || res.RowsAffected() == 0 {
+			if err != nil {
+				log.Println(err)
+				continue
 			}
-			log.Println(err)
-			continue
+			var a int64
+			if err := db.QueryRow(
+				"SELECT 1 FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at = '0000-00-00 00:00:00'",
+				eventID, sheet.ID,
+			).Scan(&a); err != nil {
+				if err == sql.ErrNoRows {
+					return resError(c, "not_reserved", 400)
+				}
+				return resError(c, "not_permitted", 403)
+			}
 		}
 
 		return c.NoContent(204)
