@@ -1052,9 +1052,10 @@ func adminLogin(c echo.Context) error {
 	}
 
 	sessSetAdministratorID(c, administrator.ID)
-	administrator.LoginName = ""
-	administrator.PassHash = ""
-	return c.JSON(200, administrator)
+	var a Administrator
+	a.ID = administrator.ID
+	a.Nickname = administrator.Nickname
+	return c.JSON(200, a)
 }
 
 func adminLogout(c echo.Context) error {
