@@ -789,7 +789,7 @@ func postReserve(c echo.Context) error {
 
 	var sheet Sheet
 	var reservationID int64
-	for {
+	for i := 0; i < 20; i++ {
 		if err := db.QueryRow("SELECT * FROM sheets WHERE id NOT IN (SELECT sheet_id FROM reservations WHERE event_id = ? AND canceled_at = '0000-00-00 00:00:00') AND `rank` = ? ORDER BY RAND() LIMIT 1", eventID, params.Rank).Scan(&sheet.ID, &sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
 			if err == sql.ErrNoRows {
 				return resError(c, "sold_out", 409)
@@ -821,13 +821,13 @@ func postReserve(c echo.Context) error {
 			continue
 		}
 		tx.Commit()
-		break
+		return c.JSON(202, echo.Map{
+			"id":         reservationID,
+			"sheet_rank": params.Rank,
+			"sheet_num":  sheet.Num,
+		})
 	}
-	return c.JSON(202, echo.Map{
-		"id":         reservationID,
-		"sheet_rank": params.Rank,
-		"sheet_num":  sheet.Num,
-	})
+	return resError(c, "max retry", 555)
 }
 
 func deleteReserve(c echo.Context) error {
