@@ -272,6 +272,8 @@ func updateRvss() error {
 	return nil
 }
 
+var gRvssLasts map[int64]time.Time
+
 func updateRvssOnlyEvent(eid int64) error {
 	now := time.Now()
 	gRvssRWLock.Lock()
@@ -279,6 +281,10 @@ func updateRvssOnlyEvent(eid int64) error {
 	if gRvssLast.After(now) {
 		return nil
 	}
+	if t, ok := gRvssLasts[eid]; ok && t.After(now) {
+		return nil
+	}
+	gRvssLasts[eid] = now
 
 	{
 		rows2, err := db.Query("SELECT * FROM reservations WHERE event_id = ? AND (canceled_at >= ? OR reserved_at >= ?)", eid, gRvssLast.Add(-2*time.Second).UTC().Format("2006-01-02 15:04:05.000000"), gRvssLast.Add(-2*time.Second).UTC().Format("2006-01-02 15:04:05.000000"))
@@ -569,6 +575,7 @@ func index(c echo.Context) error {
 func initialize2(c echo.Context) error {
 	gRvss = make(map[int64]map[int64]Reservation)
 	gRvssLast = time.Time{}
+	gRvssLasts = make(map[int64]time.Time, 100)
 	if err := updateRvss(); err != nil {
 		return err
 	}
