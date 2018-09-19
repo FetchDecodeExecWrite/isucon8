@@ -1055,7 +1055,7 @@ func adminLogin(c echo.Context) error {
 	var a Administrator
 	a.ID = administrator.ID
 	a.Nickname = administrator.Nickname
-	return c.JSON(200, a)
+	return c.JSON(200, &a)
 }
 
 func adminLogout(c echo.Context) error {
