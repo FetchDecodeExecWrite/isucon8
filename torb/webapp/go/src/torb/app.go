@@ -1142,23 +1142,14 @@ func editAdminEvent(c echo.Context) error {
 		return resError(c, "cannot_close_public_event", 400)
 	}
 
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	if _, err := tx.Exec("UPDATE events SET public_fg = ?, closed_fg = ? WHERE id = ?", params.Public, params.Closed, event.ID); err != nil {
-		tx.Rollback()
-		return err
-	}
-	if err := tx.Commit(); err != nil {
+	if _, err := db.Exec("UPDATE events SET public_fg = ?, closed_fg = ? WHERE id = ?", params.Public, params.Closed, event.ID); err != nil {
 		return err
 	}
 
-	e, err := getEvent(eventID, -1)
-	if err != nil {
-		return err
-	}
-	c.JSON(200, e)
+	event.PublicFg = params.Public
+	event.ClosedFg = params.Closed
+
+	c.JSON(200, event)
 	return nil
 }
 
