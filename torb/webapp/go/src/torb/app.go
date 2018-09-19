@@ -220,6 +220,7 @@ var (
 	gRvssLock   sync.Mutex
 	gRvssRWLock sync.RWMutex
 	gRvssLast   time.Time
+	gNextSince  string
 )
 
 func updateRvss() error {
@@ -228,13 +229,18 @@ func updateRvss() error {
 	defer gRvssLock.Unlock()
 	gRvssRWLock.Lock()
 	defer gRvssRWLock.Unlock()
+	gRvssLast = now
 
 	if gRvssLast.After(now) {
 		return nil
 	}
+
+	var start string
+	db.QueryRow("SELECT NOW(6)").Scan(&start)
+
 	{
 		// rvss[eventID][sheetID]
-		rows2, err := db.Query("SELECT * FROM reservations WHERE canceled_at >= ?", gRvssLast.Add(-time.Second/10).UTC().Format("2006-01-02 15:04:05.000000"))
+		rows2, err := db.Query("SELECT * FROM reservations WHERE canceled_at >= ?", gNextSince)
 		if err != nil {
 			return err
 		}
@@ -253,7 +259,7 @@ func updateRvss() error {
 	}
 	{
 		// rvss[eventID][sheetID]
-		rows2, err := db.Query("SELECT * FROM reservations WHERE reserved_at >= ?", gRvssLast.Add(-time.Second/10).UTC().Format("2006-01-02 15:04:05.000000"))
+		rows2, err := db.Query("SELECT * FROM reservations WHERE reserved_at >= ?", gNextSince)
 		if err != nil {
 			return err
 		}
@@ -272,7 +278,8 @@ func updateRvss() error {
 			}
 		}
 	}
-	gRvssLast = now
+	gNextSince = start
+
 	return nil
 }
 
@@ -779,7 +786,7 @@ func postReserve(c echo.Context) error {
 			continue
 		}
 
-		res, err := tx.Exec("INSERT INTO reservations (event_id, sheet_id, user_id, reserved_at, event_price) VALUES (?, ?, ?, ?, ?)", eventID, sheet.ID, user.ID, time.Now().UTC().Format("2006-01-02 15:04:05.000000"), eventPrice)
+		res, err := tx.Exec("INSERT INTO reservations (event_id, sheet_id, user_id, reserved_at, event_price) VALUES (?, ?, ?, NOW(6), ?)", eventID, sheet.ID, user.ID, eventPrice)
 		if err != nil {
 			tx.Rollback()
 			log.Println("re-try: rollback by", err)
@@ -873,7 +880,7 @@ func deleteReserve(c echo.Context) error {
 			return resError(c, "not_reserved", 400)
 		}
 
-		if _, err := tx.Exec("UPDATE reservations SET canceled_at = ? WHERE id = ?", time.Now().UTC().Format("2006-01-02 15:04:05.000000"), reservation.ID); err != nil {
+		if _, err := tx.Exec("UPDATE reservations SET canceled_at = NOW(6) WHERE id = ?", reservation.ID); err != nil {
 			tx.Rollback()
 			continue
 		}
