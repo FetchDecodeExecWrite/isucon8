@@ -660,7 +660,7 @@ func getUser(c echo.Context) error {
 
 	var recentReservations []Reservation
 	eg.Go(func() error {
-		rows, err := db.Query("SELECT r.*, s.rank AS sheet_rank, s.num AS sheet_num FROM reservations r INNER JOIN sheets s ON s.id = r.sheet_id WHERE r.user_id = ? ORDER BY IF(r.canceled_at > '0000-00-00 00:00:00', r.canceled_at, r.reserved_at) DESC LIMIT 5", user.ID)
+		rows, err := db.Query("SELECT * FROM reservations WHERE user_id = ? ORDER BY IF(canceled_at > '0000-00-00 00:00:00', canceled_at, reserved_at) DESC LIMIT 5", user.ID)
 		if err != nil {
 			return err
 		}
@@ -668,10 +668,10 @@ func getUser(c echo.Context) error {
 
 		for rows.Next() {
 			var reservation Reservation
-			var sheet Sheet
-			if err := rows.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &reservation.EventPrice, &sheet.Rank, &sheet.Num); err != nil {
+			if err := rows.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &reservation.EventPrice); err != nil {
 				return err
 			}
+			sheet := sheetIDtoSheet(reservation.SheetID)
 
 			event, err := getEvent(reservation.EventID, -1)
 			if err != nil {
@@ -1052,10 +1052,6 @@ func adminLogin(c echo.Context) error {
 	}
 
 	sessSetAdministratorID(c, administrator.ID)
-	administrator, err := getLoginAdministrator(c)
-	if err != nil {
-		return err
-	}
 	return c.JSON(200, administrator)
 }
 
