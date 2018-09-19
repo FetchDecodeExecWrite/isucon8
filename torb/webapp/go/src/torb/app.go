@@ -515,16 +515,31 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 
 var db *sql.DB
 
+var (
+	cachedEvents     []*Event
+	cachedTime       time.Time
+	cachedEventsLock sync.Mutex
+)
+
 func index(c echo.Context) error {
-	events, err := getEvents(false)
-	if err != nil {
+	f := func() error {
+		var err error
+		now := time.Now()
+		cachedEventsLock.Lock()
+		defer cachedEventsLock.Unlock()
+
+		cachedTime = now
+		cachedEvents, err = getEvents(false)
+		for i, v := range cachedEvents {
+			cachedEvents[i] = sanitizeEvent(v)
+		}
 		return err
 	}
-	for i, v := range events {
-		events[i] = sanitizeEvent(v)
+	if err := f(); err != nil {
+		return err
 	}
 	return c.Render(200, "index.tmpl", echo.Map{
-		"events": events,
+		"events": cachedEvents,
 		"user":   c.Get("user"),
 		"origin": c.Scheme() + "://" + c.Request().Host,
 	})
