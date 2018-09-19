@@ -396,12 +396,7 @@ func getEvents(all bool) ([]*Event, error) {
 
 func getEvent(eventID, uid int64) (*Event, error) {
 	eg := errgroup.Group{}
-	eg.Go(func() error {
-		if err := updateRvssOnlyEvent(eventID); err != nil {
-			return err
-		}
-		return nil
-	})
+	eg.Go(updateRvss)
 
 	var event Event
 	eg.Go(func() error {
