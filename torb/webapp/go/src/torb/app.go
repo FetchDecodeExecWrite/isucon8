@@ -238,6 +238,7 @@ func updateRvss() error {
 		if err != nil {
 			return err
 		}
+		defer rows2.Close()
 		for rows2.Next() {
 			var rv Reservation
 			err := rows2.Scan(&rv.ID, &rv.EventID, &rv.SheetID, &rv.UserID, &rv.ReservedAt, &rv.CanceledAt, &rv.EventPrice)
@@ -249,7 +250,6 @@ func updateRvss() error {
 			}
 			delete(gRvss[rv.EventID], rv.SheetID)
 		}
-		rows2.Close()
 	}
 	{
 		// rvss[eventID][sheetID]
@@ -257,6 +257,7 @@ func updateRvss() error {
 		if err != nil {
 			return err
 		}
+		defer rows2.Close()
 		for rows2.Next() {
 			var rv Reservation
 			err := rows2.Scan(&rv.ID, &rv.EventID, &rv.SheetID, &rv.UserID, &rv.ReservedAt, &rv.CanceledAt, &rv.EventPrice)
@@ -270,7 +271,6 @@ func updateRvss() error {
 				gRvss[rv.EventID][rv.SheetID] = rv
 			}
 		}
-		rows2.Close()
 	}
 	gRvssLast = now
 	return nil
