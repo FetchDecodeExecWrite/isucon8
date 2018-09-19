@@ -1128,8 +1128,8 @@ func editAdminEvent(c echo.Context) error {
 		params.Public = false
 	}
 
-	event, err := getEvent(eventID, -1)
-	if err != nil {
+	var event Event
+	if err := db.QueryRow("SELECT * FROM events WHERE id = ?", eventID).Scan(&event.ID, &event.Title, &event.PublicFg, &event.ClosedFg, &event.Price); err != nil {
 		if err == sql.ErrNoRows {
 			return resError(c, "not_found", 404)
 		}
