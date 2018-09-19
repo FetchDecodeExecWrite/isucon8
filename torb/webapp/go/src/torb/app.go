@@ -771,8 +771,9 @@ func postReserve(c echo.Context) error {
 		return err
 	}
 
+	var eventPrice int64
 	var publicFg bool
-	if err := db.QueryRow("SELECT public_fg FROM events WHERE id = ?", eventID).Scan(&publicFg); err != nil {
+	if err := db.QueryRow("SELECT price, public_fg FROM events WHERE id = ?", eventID).Scan(&eventPrice, &publicFg); err != nil {
 		if err == sql.ErrNoRows {
 			return resError(c, "invalid_event", 404)
 		}
@@ -789,7 +790,7 @@ func postReserve(c echo.Context) error {
 	var sheet Sheet
 	var reservationID int64
 	for {
-		if err := db.QueryRow("SELECT * FROM sheets WHERE id NOT IN (SELECT sheet_id FROM reservations WHERE event_id = ? AND canceled_at = '0000-00-00 00:00:00') AND `rank` = ? ORDER BY RAND() LIMIT 1", event.ID, params.Rank).Scan(&sheet.ID, &sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
+		if err := db.QueryRow("SELECT * FROM sheets WHERE id NOT IN (SELECT sheet_id FROM reservations WHERE event_id = ? AND canceled_at = '0000-00-00 00:00:00') AND `rank` = ? ORDER BY RAND() LIMIT 1", eventID, params.Rank).Scan(&sheet.ID, &sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
 			if err == sql.ErrNoRows {
 				return resError(c, "sold_out", 409)
 			}
@@ -802,12 +803,12 @@ func postReserve(c echo.Context) error {
 		}
 
 		id := ""
-		if err := tx.QueryRow("SELECT id FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at = '0000-00-00 00:00:00' FOR UPDATE", event.ID, sheet.ID).Scan(&id); err != sql.ErrNoRows {
+		if err := tx.QueryRow("SELECT id FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at = '0000-00-00 00:00:00' FOR UPDATE", eventID, sheet.ID).Scan(&id); err != sql.ErrNoRows {
 			tx.Rollback()
 			continue
 		}
 
-		res, err := tx.Exec("INSERT INTO reservations (event_id, sheet_id, user_id, reserved_at, event_price) VALUES (?, ?, ?, ?, ?)", event.ID, sheet.ID, user.ID, time.Now().UTC().Format("2006-01-02 15:04:05.000000"), event.Price)
+		res, err := tx.Exec("INSERT INTO reservations (event_id, sheet_id, user_id, reserved_at, event_price) VALUES (?, ?, ?, ?, ?)", eventID, sheet.ID, user.ID, time.Now().UTC().Format("2006-01-02 15:04:05.000000"), eventPrice)
 		if err != nil {
 			tx.Rollback()
 			log.Println("re-try: rollback by", err)
