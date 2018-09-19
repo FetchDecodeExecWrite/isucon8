@@ -953,14 +953,33 @@ func deleteReserve(c echo.Context) error {
 	return resError(c, "retry exceed", 555)
 }
 
+var (
+	cachedAdminEvents     []*Event
+	cachedAdminTime       time.Time
+	cachedAdminEventsLock sync.Mutex
+)
+
 func getAdmin(c echo.Context) error {
+	f := func() error {
+		var err error
+		now := time.Now()
+		cachedAdminEventsLock.Lock()
+		defer cachedAdminEventsLock.Unlock()
+		if cachedAdminTime.After(now) {
+			return nil
+		}
+		cachedAdminTime = time.Now()
+		cachedAdminEvents, err = getEvents(true)
+		return err
+	}
+
 	var events []*Event
 	administrator := c.Get("administrator")
 	if administrator != nil {
-		var err error
-		if events, err = getEvents(true); err != nil {
+		if err := f(); err != nil {
 			return err
 		}
+		events = cachedAdminEvents
 	}
 	return c.Render(200, "admin.tmpl", echo.Map{
 		"events":        events,
