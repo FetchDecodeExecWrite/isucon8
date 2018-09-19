@@ -824,47 +824,61 @@ func postReserve(c echo.Context) error {
 
 	var sheet Sheet
 	var reservationID int64
-	for i := 0; i < 20; i++ {
-		if err := db.QueryRow("SELECT * FROM sheets WHERE id NOT IN (SELECT sheet_id FROM reservations WHERE event_id = ? AND canceled_at = '0000-00-00 00:00:00') AND `rank` = ? ORDER BY RAND() LIMIT 1", eventID, params.Rank).Scan(&sheet.ID, &sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
-			if err == sql.ErrNoRows {
-				return resError(c, "sold_out", 409)
+
+	errCh := make(chan error)
+	ctx := c.Request().Context()
+
+	go (func() {
+		for i := 0; i < 20; i++ {
+			if err := db.QueryRow("SELECT * FROM sheets WHERE id NOT IN (SELECT sheet_id FROM reservations WHERE event_id = ? AND canceled_at = '0000-00-00 00:00:00') AND `rank` = ? ORDER BY RAND() LIMIT 1", eventID, params.Rank).Scan(&sheet.ID, &sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
+				if err == sql.ErrNoRows {
+					errCh <- resError(c, "sold_out", 409)
+					return
+				}
+				errCh <- err
+				return
 			}
-			return err
-		}
 
-		tx, err := db.Begin()
-		if err != nil {
-			return err
-		}
+			tx, err := db.Begin()
+			if err != nil {
+				errCh <- err
+				return
+			}
 
-		/*
-			id := ""
-			if err := tx.QueryRow("SELECT id FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at = '0000-00-00 00:00:00' FOR UPDATE", eventID, sheet.ID).Scan(&id); err != sql.ErrNoRows {
+			res, err := tx.ExecContext(ctx, "INSERT INTO reservations (event_id, sheet_id, user_id, reserved_at, event_price) VALUES (?, ?, ?, ?, ?)", eventID, sheet.ID, user.ID, time.Now().UTC().Format("2006-01-02 15:04:05.000000"), eventPrice)
+			if err != nil {
 				tx.Rollback()
+				log.Println("re-try: rollback by", err)
 				continue
 			}
-		*/
+			reservationID, err = res.LastInsertId()
+			if err != nil {
+				tx.Rollback()
+				log.Println("re-try: rollback by", err)
+				continue
+			}
+			tx.Commit()
+			errCh <- nil
+			return
+		}
+		errCh <- resError(c, "max retry", 555)
+		return
+	})()
 
-		res, err := tx.Exec("INSERT INTO reservations (event_id, sheet_id, user_id, reserved_at, event_price) VALUES (?, ?, ?, ?, ?)", eventID, sheet.ID, user.ID, time.Now().UTC().Format("2006-01-02 15:04:05.000000"), eventPrice)
+	select {
+	case err := <-errCh:
 		if err != nil {
-			tx.Rollback()
-			log.Println("re-try: rollback by", err)
-			continue
+			return err
 		}
-		reservationID, err = res.LastInsertId()
-		if err != nil {
-			tx.Rollback()
-			log.Println("re-try: rollback by", err)
-			continue
-		}
-		tx.Commit()
 		return c.JSON(202, echo.Map{
 			"id":         reservationID,
 			"sheet_rank": params.Rank,
 			"sheet_num":  sheet.Num,
 		})
+	case <-ctx.Done():
+		return ctx.Err()
 	}
-	return resError(c, "max retry", 555)
+
 }
 
 func deleteReserve(c echo.Context) error {
