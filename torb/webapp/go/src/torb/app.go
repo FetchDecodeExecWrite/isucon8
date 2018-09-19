@@ -857,11 +857,11 @@ func deleteReserve(c echo.Context) error {
 	case "S":
 		sheet.ID = num
 	case "A":
-		sheet.ID = num - 50
+		sheet.ID = num + 50
 	case "B":
-		sheet.ID = num - 200
+		sheet.ID = num + 200
 	case "C":
-		sheet.ID = num - 500
+		sheet.ID = num + 500
 	default:
 		return resError(c, "invalid_sheet", 404)
 	}
