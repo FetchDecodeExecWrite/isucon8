@@ -1318,7 +1318,7 @@ func main() {
 
 			w := c.Response()
 			for _, stat := range stats {
-				fmt.Fprintf(w, "%s, %v\n", stat.Key, stat)
+				fmt.Fprintf(w, "%s, %+v\n", stat.Key, stat)
 			}
 
 			return nil
