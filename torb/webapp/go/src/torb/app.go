@@ -26,6 +26,12 @@ import (
 	echopprof "github.com/sevenNt/echo-pprof"
 )
 
+// EventID -> SheetID -> UserID or -1
+var (
+	SheetRserveLock sync.RWMutex
+	SheetReserved   map[int64]map[int64]int64
+)
+
 type User struct {
 	ID        int64  `json:"id,omitempty"`
 	Nickname  string `json:"nickname,omitempty"`
@@ -886,25 +892,16 @@ func postReserve(c echo.Context) error {
 				return
 			}
 
-			tx, err := db.Begin()
+			res, err := db.ExecContext(ctx, "INSERT INTO reservations (event_id, sheet_id, user_id, reserved_at, event_price) VALUES (?, ?, ?, ?, ?)", eventID, sheet.ID, user.ID, time.Now().UTC().Format("2006-01-02 15:04:05.000000"), eventPrice)
 			if err != nil {
-				errCh <- err
-				return
-			}
-
-			res, err := tx.ExecContext(ctx, "INSERT INTO reservations (event_id, sheet_id, user_id, reserved_at, event_price) VALUES (?, ?, ?, ?, ?)", eventID, sheet.ID, user.ID, time.Now().UTC().Format("2006-01-02 15:04:05.000000"), eventPrice)
-			if err != nil {
-				tx.Rollback()
 				log.Println("re-try: rollback by", err)
 				continue
 			}
 			reservationID, err = res.LastInsertId()
 			if err != nil {
-				tx.Rollback()
 				log.Println("re-try: rollback by", err)
 				continue
 			}
-			tx.Commit()
 			errCh <- nil
 			return
 		}
