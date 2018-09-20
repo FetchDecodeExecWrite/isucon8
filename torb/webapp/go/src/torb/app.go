@@ -1306,6 +1306,24 @@ func main() {
 
 	if os.Getenv("DEBUG_ISUCON") == "" {
 		echopprof.Wrap(e)
+
+		e.GET("/debug/measure/reset", func(c echo.Context) error {
+			measure.Reset()
+			return nil
+		})
+
+		e.GET("/debug/measure/:sort", func(c echo.Context) error {
+			stats := measure.GetStats()
+			stats.SortDesc(c.Param("sort"))
+
+			w := c.Response()
+			for _, stat := range stats {
+				fmt.Fprintf(w, "%s = %f\n", stat.Key, stat.Sum)
+			}
+
+			return nil
+		})
+
 	} else {
 		fmt.Println("debugging...")
 	}
