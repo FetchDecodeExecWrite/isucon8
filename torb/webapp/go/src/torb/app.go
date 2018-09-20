@@ -243,7 +243,7 @@ func updateRvss() error {
 	}
 
 	{
-		rows2, err := db.Query("SELECT * FROM reservations WHERE canceled_at >= ? OR reserved_at >= ?", gRvssLast.Add(-2*time.Second).UTC().Format("2006-01-02 15:04:05.000000"), gRvssLast.Add(-2*time.Second).UTC().Format("2006-01-02 15:04:05.000000"))
+		rows2, err := db.Query("SELECT * FROM reservations WHERE canceled_at >= ? OR reserved_at >= ?", gRvssLast.Add(-time.Second).UTC().Format("2006-01-02 15:04:05.000000"), gRvssLast.Add(-time.Second).UTC().Format("2006-01-02 15:04:05.000000"))
 		if err != nil {
 			return err
 		}
@@ -296,7 +296,7 @@ func updateRvssOnlyEvent(eid int64) error {
 	gRvssLasts[eid] = now
 
 	{
-		rows2, err := db.Query("SELECT * FROM reservations WHERE event_id = ? AND (canceled_at >= ? OR reserved_at >= ?)", eid, gRvssLast.Add(-2*time.Second).UTC().Format("2006-01-02 15:04:05.000000"), gRvssLast.Add(-2*time.Second).UTC().Format("2006-01-02 15:04:05.000000"))
+		rows2, err := db.Query("SELECT * FROM reservations WHERE event_id = ? AND (canceled_at >= ? OR reserved_at >= ?)", eid, gRvssLast.Add(-time.Second).UTC().Format("2006-01-02 15:04:05.000000"), gRvssLast.Add(-time.Second).UTC().Format("2006-01-02 15:04:05.000000"))
 		if err != nil {
 			return err
 		}
@@ -1303,7 +1303,7 @@ func main() {
 	go (func() {
 		for {
 			updateRvss()
-			time.Sleep(time.Second / 30)
+			time.Sleep(time.Second / 10)
 		}
 	})()
 
