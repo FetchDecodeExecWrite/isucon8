@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"os"
 	"os/exec"
 	"strconv"
@@ -1333,7 +1334,8 @@ func main() {
 		fmt.Println("debugging...")
 	}
 
-	if os.Hostname() == "isu1" {
+	n, err := os.Hostname()
+	if n == "isu1" {
 		os.Remove("/tmp/echo.sock")
 		l, err := net.Listen("unix", "/tmp/echo.sock")
 		if err != nil {
