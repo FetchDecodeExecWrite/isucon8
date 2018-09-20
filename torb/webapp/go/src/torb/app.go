@@ -1318,7 +1318,7 @@ func main() {
 
 			w := c.Response()
 			for _, stat := range stats {
-				fmt.Fprintf(w, "%s = %f\n", stat.Key, stat.Sum)
+				fmt.Fprintf(w, "%s, %v\n", stat.Key, stat.Sum)
 			}
 
 			return nil
