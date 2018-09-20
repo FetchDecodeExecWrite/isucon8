@@ -1332,6 +1332,16 @@ func main() {
 	} else {
 		fmt.Println("debugging...")
 	}
+
+	if os.Hostname() == "isu1" {
+		os.Remove("/tmp/echo.sock")
+		l, err := net.Listen("unix", "/tmp/echo.sock")
+		if err != nil {
+			log.Fatal(err)
+		}
+		e.Listener = l
+	}
+
 	e.Start(":8080")
 }
 
