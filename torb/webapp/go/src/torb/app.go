@@ -20,6 +20,8 @@ import (
 	"github.com/labstack/echo"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/middleware"
+
+	"github.com/najeira/measure"
 	echopprof "github.com/sevenNt/echo-pprof"
 )
 
@@ -407,6 +409,7 @@ func getEvents(all bool) ([]*Event, error) {
 func getEvent(eventID, uid int64) (*Event, error) {
 	eg := errgroup.Group{}
 	eg.Go(func() error {
+		defer measure.Start("updateRvssOnlyEvent").Stop()
 		if err := updateRvssOnlyEvent(eventID); err != nil {
 			return err
 		}
@@ -415,15 +418,21 @@ func getEvent(eventID, uid int64) (*Event, error) {
 
 	var event Event
 	eg.Go(func() error {
+		defer measure.Start("get event sql").Stop()
 		if err := db2.QueryRow("SELECT * FROM events WHERE id = ?", eventID).Scan(&event.ID, &event.Title, &event.PublicFg, &event.ClosedFg, &event.Price); err != nil {
 			return err
 		}
 		return nil
 	})
 
+	m := measure.Start("eg wait")
 	if err := eg.Wait(); err != nil {
 		return nil, err
 	}
+	m.Stop()
+
+	m = measure.Start("after wait")
+	defer m.Stop()
 
 	gRvssRWLock.RLock()
 	defer gRvssRWLock.RUnlock()
