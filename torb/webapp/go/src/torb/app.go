@@ -601,7 +601,7 @@ func initialize2(c echo.Context) error {
 }
 
 func initialize(c echo.Context) error {
-	go exec.Command("curl", "http://172.16.21.1:8080/initialize3").Run()
+	go exec.Command("curl", "http://172.16.21.1/initialize3").Run()
 
 	cmd := exec.Command("../../db/init.sh")
 	cmd.Stdin = os.Stdin
@@ -611,7 +611,7 @@ func initialize(c echo.Context) error {
 		return nil
 	}
 
-	exec.Command("curl", "http://172.16.21.1:8080/initialize2").Run()
+	exec.Command("curl", "http://172.16.21.1/initialize2").Run()
 	exec.Command("curl", "http://172.16.21.2:8080/initialize2").Run()
 	exec.Command("curl", "http://172.16.21.3:8080/initialize2").Run()
 
