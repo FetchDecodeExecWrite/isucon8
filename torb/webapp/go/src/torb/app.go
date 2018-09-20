@@ -1336,8 +1336,8 @@ func main() {
 
 	n, err := os.Hostname()
 	if n == "isu1" {
-		os.Remove("/tmp/echo.sock")
-		l, err := net.Listen("unix", "/tmp/echo.sock")
+		os.Remove("/var/run/echo.sock")
+		l, err := net.Listen("unix", "/var/run/echo.sock")
 		if err != nil {
 			log.Fatal(err)
 		}
